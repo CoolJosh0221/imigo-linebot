@@ -1,0 +1,107 @@
+{
+  "size": {
+    "width": 2500,
+    "height": 1686
+  },
+  "selected": true,
+  "name": "Migrant Worker Complete Menu",
+  "chatBarText": "Tap for Help 點擊求助",
+  "areas": [
+    {
+      "bounds": {
+        "x": 0,
+        "y": 843,
+        "width": 625,
+        "height": 421
+      },
+      "action": {
+        "type": "postback",
+        "data": "category_healthcare"
+      }
+    },
+    {
+      "bounds": {
+        "x": 625,
+        "y": 843,
+        "width": 625,
+        "height": 421
+      },
+      "action": {
+        "type": "postback",
+        "data": "category_labor"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1250,
+        "y": 843,
+        "width": 625,
+        "height": 421
+      },
+      "action": {
+        "type": "postback",
+        "data": "category_language"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1875,
+        "y": 843,
+        "width": 625,
+        "height": 421
+      },
+      "action": {
+        "type": "postback",
+        "data": "category_emergency"
+      }
+    },
+    {
+      "bounds": {
+        "x": 0,
+        "y": 1264,
+        "width": 625,
+        "height": 422
+      },
+      "action": {
+        "type": "postback",
+        "data": "category_government"
+      }
+    },
+    {
+      "bounds": {
+        "x": 625,
+        "y": 1264,
+        "width": 625,
+        "height": 422
+      },
+      "action": {
+        "type": "postback",
+        "data": "category_daily"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1250,
+        "y": 1264,
+        "width": 625,
+        "height": 422
+      },
+      "action": {
+        "type": "postback",
+        "data": "category_translate"
+      }
+    },
+    {
+      "bounds": {
+        "x": 1875,
+        "y": 1264,
+        "width": 625,
+        "height": 422
+      },
+      "action": {
+        "type": "postback",
+        "data": "clear_chat"
+      }
+    }
+  ]
+}

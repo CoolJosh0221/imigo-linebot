@@ -1,0 +1,17 @@
+[project]
+name = "imigo-linebot"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aiosqlite>=0.21.0",
+    "fastapi>=0.116.1",
+    "google-genai>=1.36.0",
+    "greenlet>=3.2.4",
+    "line-bot-sdk>=3.19.0",
+    "python-dotenv>=1.1.1",
+    "requests>=2.32.5",
+    "sqlalchemy>=2.0.43",
+    "uvicorn>=0.35.0",
+]
