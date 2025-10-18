@@ -1,0 +1,45 @@
+bot:
+  name: "移工小幫手"
+  language: zh
+  country: taiwan
+
+messages:
+  welcome: |
+    👋 你好！我是協助在台移工的小幫手。
+
+    我可以幫忙：
+    - 醫療服務
+    - 勞工權益
+    - 日常生活
+    - 翻譯
+
+    歡迎提問！
+
+  help: |
+    📋 我可以協助：
+    - 醫療和醫院資訊
+    - 勞工權益
+    - 在台生活資訊
+    - 翻譯
+
+    用中文問我！
+
+  cleared: "✅ 對話記錄已清除"
+
+  unknown_command: "❓ 未知指令"
+
+  error: "抱歉，發生錯誤。請重試。"
+
+emergency:
+  police: "110"
+  ambulance: "119"
+  labor_hotline: "1955"
+  local_office: "勞動部專線: 1955"
+
+quick_replies:
+  - label: "🏥 醫療"
+    text: "我需要醫療協助"
+  - label: "💼 勞權"
+    text: "我有工作問題"
+  - label: "🚨 緊急"
+    text: "這是緊急情況！"

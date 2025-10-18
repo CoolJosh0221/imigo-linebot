@@ -1,12 +1,9 @@
 from __future__ import annotations
-
 import logging
 from datetime import datetime, timedelta
 from typing import Optional
-
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from database.models import Base, Conversation, UserPreferences
 
 log = logging.getLogger(__name__)
@@ -30,8 +27,6 @@ class DatabaseService:
 
     async def dispose(self) -> None:
         await self.engine.dispose()
-
-    # -------- Conversations --------
 
     async def save_message(self, user_id: str, role: str, content: str) -> None:
         async with self.Session() as s, s.begin():
@@ -74,8 +69,6 @@ class DatabaseService:
             count = res.rowcount or 0
         log.info("Cleaned %d old messages", count)
         return count
-
-    # -------- Preferences --------
 
     async def set_user_language(self, user_id: str, language: str) -> None:
         async with self.Session() as s, s.begin():

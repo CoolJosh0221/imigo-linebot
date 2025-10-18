@@ -1,4 +1,3 @@
-# database/models.py
 from sqlalchemy import Column, String, DateTime, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
@@ -12,7 +11,7 @@ class Conversation(Base):
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     user_id = Column(String, nullable=False, index=True)
-    role = Column(String, nullable=False)  # 'user' or 'assistant'
+    role = Column(String, nullable=False)
     content = Column(Text, nullable=False)
     created_at = Column(DateTime, default=func.now())
 

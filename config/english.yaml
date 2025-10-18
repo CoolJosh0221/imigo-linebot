@@ -1,0 +1,45 @@
+bot:
+  name: "Migrant Worker Helper"
+  language: en
+  country: international
+
+messages:
+  welcome: |
+    👋 Hello! I'm here to help migrant workers in Taiwan.
+
+    I can help with:
+    - Healthcare services
+    - Labor rights
+    - Daily life
+    - Translation
+
+    Ask me anything!
+
+  help: |
+    📋 I can help with:
+    - Health and hospital information
+    - Worker rights
+    - Daily life in Taiwan
+    - Translation
+
+    Ask me in English!
+
+  cleared: "✅ Chat history cleared"
+
+  unknown_command: "❓ Unknown command"
+
+  error: "Sorry, an error occurred. Please try again."
+
+emergency:
+  police: "110"
+  ambulance: "119"
+  labor_hotline: "1955"
+  info: "Ministry of Labor: 1955"
+
+quick_replies:
+  - label: "🏥 Health"
+    text: "I need health assistance"
+  - label: "💼 Work Rights"
+    text: "I have a work problem"
+  - label: "🚨 Emergency"
+    text: "This is an emergency!"

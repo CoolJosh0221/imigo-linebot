@@ -1,0 +1,46 @@
+bot:
+  name: "Trợ lý Lao động Việt"
+  language: vi
+  country: vietnam
+
+messages:
+  welcome: |
+    👋 Xin chào! Tôi là trợ lý cho lao động Việt Nam tại Đài Loan.
+
+    Tôi có thể giúp:
+    - Dịch vụ y tế
+    - Quyền lao động
+    - Cuộc sống hàng ngày
+    - Dịch thuật
+
+    Hãy hỏi tôi bất cứ điều gì!
+
+  help: |
+    📋 Tôi có thể giúp:
+    - Thông tin y tế và bệnh viện
+    - Quyền của người lao động
+    - Cuộc sống hàng ngày ở Đài Loan
+    - Dịch thuật
+
+    Hỏi bằng tiếng Việt!
+
+  cleared: "✅ Đã xóa lịch sử chat"
+
+  unknown_command: "❓ Lệnh không hợp lệ."
+
+  error: "Xin lỗi, có lỗi. Vui lòng thử lại."
+
+emergency:
+  police: "110"
+  ambulance: "119"
+  labor_hotline: "1955"
+  embassy: "Văn phòng Kinh tế: 02-2516-6626"
+  consular: "Hotline: 0903-927-827"
+
+quick_replies:
+  - label: "🏥 Y tế"
+    text: "Tôi cần trợ giúp y tế"
+  - label: "💼 Công việc"
+    text: "Tôi có vấn đề công việc"
+  - label: "🚨 Khẩn cấp"
+    text: "Đây là khẩn cấp!"

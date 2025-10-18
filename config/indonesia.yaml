@@ -1,0 +1,46 @@
+bot:
+  name: "Pekerja Indonesia di Taiwan"
+  language: id
+  country: indonesia
+
+messages:
+  welcome: |
+    👋 Halo! Saya asisten untuk pekerja Indonesia di Taiwan.
+
+    Saya bisa membantu dengan:
+    - Layanan kesehatan
+    - Hak tenaga kerja
+    - Kehidupan sehari-hari
+    - Terjemahan
+
+    Tanyakan apa saja!
+
+  help: |
+    📋 Saya bisa membantu Anda dengan:
+    - Informasi kesehatan dan rumah sakit
+    - Hak pekerja dan masalah di tempat kerja
+    - Kehidupan sehari-hari di Taiwan
+    - Terjemahan
+
+    Tanyakan apa saja dalam Bahasa Indonesia!
+
+  cleared: "✅ Riwayat percakapan telah dihapus"
+
+  unknown_command: "❓ Perintah tidak dikenal."
+
+  error: "Maaf, ada kesalahan. Silakan coba lagi."
+
+emergency:
+  police: "110"
+  ambulance: "119"
+  labor_hotline: "1955"
+  embassy: "KDEI Taipei: 02-2720-0100"
+  consular: "Layanan Konsuler: 02-2720-0101"
+
+quick_replies:
+  - label: "🏥 Kesehatan"
+    text: "Saya butuh bantuan kesehatan"
+  - label: "💼 Hak Kerja"
+    text: "Saya punya masalah di tempat kerja"
+  - label: "🚨 Darurat"
+    text: "Ini darurat!"
