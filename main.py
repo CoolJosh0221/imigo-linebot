@@ -12,10 +12,17 @@ from linebot.v3.messaging import (
     ReplyMessageRequest,
     TextMessage,
 )
-from linebot.v3.webhooks import MessageEvent, TextMessageContent
+from linebot.v3.webhooks import (
+    MessageEvent,
+    TextMessageContent,
+    PostbackEvent,
+    LocationMessageContent,
+)
 
 from database.database import DatabaseService
 from services.ai_service import AIService
+from services.translation_service import TranslationService
+from services.location_service import LocationService
 from config import load_config, get_config
 
 logging.basicConfig(level=logging.INFO)
@@ -23,19 +30,23 @@ log = logging.getLogger(__name__)
 
 db_service: DatabaseService
 ai_service: AIService
+translation_service: TranslationService
+location_service: LocationService
 
 app = FastAPI()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_service, ai_service
+    global db_service, ai_service, translation_service, location_service
 
     cfg = load_config()
 
     db_service = DatabaseService()
     await db_service.init_db()
     ai_service = AIService(db_service, cfg)
+    translation_service = TranslationService(cfg)
+    location_service = LocationService(cfg)
 
     log.info(f"{cfg.bot.name} started ({cfg.bot.language})")
     yield
@@ -70,16 +81,32 @@ async def health():
     return {"status": "healthy"}
 
 
-async def handle_message(event: MessageEvent) -> None:
-    if not isinstance(event.message, TextMessageContent):
-        return
-
+async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
+    """Handle text messages in personal and group chats"""
     cfg = get_config()
     line_api, _ = get_line_api()
 
-    user_id = event.source.user_id
-    text = event.message.text
+    # Check if this is a group chat
+    group_id = getattr(event.source, "group_id", None)
+    if group_id:
+        # Handle group translation
+        group_settings = await db_service.get_group_settings(group_id)
+        if group_settings and group_settings.get("translate_enabled"):
+            target_lang = group_settings.get("target_language", "zh")
+            translated = await translation_service.translate_message(
+                text, target_lang, source_language="auto"
+            )
+            formatted = translation_service.format_translation_message(
+                text, translated, target_lang
+            )
+            await line_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token, messages=[TextMessage(text=formatted)]
+                )
+            )
+            return
 
+    # Personal chat - use AI service
     lang = await db_service.get_user_language(user_id)
     if not lang:
         await db_service.set_user_language(user_id, cfg.bot.language)
@@ -100,6 +127,118 @@ async def handle_message(event: MessageEvent) -> None:
     )
 
 
+async def handle_location_message(
+    event: MessageEvent, user_id: str, location: LocationMessageContent
+) -> None:
+    """Handle location messages"""
+    cfg = get_config()
+    line_api, _ = get_line_api()
+
+    latitude = location.latitude
+    longitude = location.longitude
+
+    lang = await db_service.get_user_language(user_id)
+
+    # Find nearby Indonesian restaurants by default
+    response = await location_service.find_indonesian_restaurants(
+        latitude, longitude, lang
+    )
+
+    await line_api.reply_message(
+        ReplyMessageRequest(
+            reply_token=event.reply_token, messages=[TextMessage(text=response)]
+        )
+    )
+
+
+async def handle_postback(event: PostbackEvent) -> None:
+    """Handle postback events from rich menu"""
+    cfg = get_config()
+    line_api, _ = get_line_api()
+
+    user_id = event.source.user_id
+    data = event.postback.data
+
+    log.info(f"Postback event: {data} from user {user_id[:8]}")
+
+    # Handle different postback actions
+    if data == "clear_chat":
+        await db_service.clear_user_conversation(user_id)
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=cfg.get_message("cleared"))],
+            )
+        )
+
+    elif data == "category_emergency":
+        emergency_info = cfg.get_emergency_info()
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=emergency_info)],
+            )
+        )
+
+    elif data == "category_healthcare":
+        lang = await db_service.get_user_language(user_id)
+        messages = {
+            "id": "🏥 Untuk mencari rumah sakit terdekat, kirim lokasi Anda dengan klik 📎 > Lokasi",
+            "zh": "🏥 要尋找附近的醫院，請點擊 📎 > 位置 發送您的位置",
+            "en": "🏥 To find nearby hospitals, send your location by clicking 📎 > Location",
+        }
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=messages.get(lang, messages["en"]))],
+            )
+        )
+
+    elif data == "category_language":
+        lang = await db_service.get_user_language(user_id)
+        messages = {
+            "id": "🌐 Pilih bahasa Anda:\nKetik: /lang id (Indonesia)\n/lang zh (中文)\n/lang en (English)",
+            "zh": "🌐 選擇您的語言：\n輸入: /lang id (印尼文)\n/lang zh (中文)\n/lang en (英文)",
+            "en": "🌐 Choose your language:\nType: /lang id (Indonesian)\n/lang zh (Chinese)\n/lang en (English)",
+        }
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=messages.get(lang, messages["en"]))],
+            )
+        )
+
+    else:
+        # For other categories, trigger AI conversation
+        prompts = {
+            "category_labor": "I have a problem at work",
+            "category_government": "I need information about government services",
+            "category_daily": "I need help with daily life",
+            "category_translate": "I need translation help",
+        }
+
+        prompt = prompts.get(data, cfg.get_message("help"))
+        reply = await ai_service.generate_response(user_id, prompt)
+
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token, messages=[TextMessage(text=reply)]
+            )
+        )
+
+
+async def handle_message(event: MessageEvent) -> None:
+    """Route message events to appropriate handlers"""
+    user_id = event.source.user_id
+
+    if isinstance(event.message, TextMessageContent):
+        await handle_text_message(event, user_id, event.message.text)
+    elif isinstance(event.message, LocationMessageContent):
+        await handle_location_message(event, user_id, event.message)
+    else:
+        log.info(f"Unhandled message type: {type(event.message)}")
+
+
 @app.post("/webhook")
 async def webhook(request: Request):
     _, parser = get_line_api()
@@ -115,6 +254,8 @@ async def webhook(request: Request):
     for event in events:
         if isinstance(event, MessageEvent):
             await handle_message(event)
+        elif isinstance(event, PostbackEvent):
+            await handle_postback(event)
 
     return {"status": "ok"}
 
