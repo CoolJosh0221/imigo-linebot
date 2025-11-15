@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, Text
+from sqlalchemy import Column, String, DateTime, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
 import uuid
@@ -21,5 +21,17 @@ class UserPreferences(Base):
 
     user_id = Column(String, primary_key=True)
     language = Column(String, nullable=False, default="en")
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
+
+
+class GroupSettings(Base):
+    """Group translation settings for LINE group chats"""
+    __tablename__ = "group_settings"
+
+    group_id = Column(String, primary_key=True)
+    translate_enabled = Column(Boolean, default=False)
+    target_language = Column(String, default="zh")  # id, zh, en
+    enabled_by = Column(String)  # user_id who enabled translation
     created_at = Column(DateTime, default=func.now())
     updated_at = Column(DateTime, default=func.now(), onupdate=func.now())

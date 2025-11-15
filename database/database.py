@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from database.models import Base, Conversation, UserPreferences
+from database.models import Base, Conversation, UserPreferences, GroupSettings
 
 log = logging.getLogger(__name__)
 
@@ -90,3 +90,55 @@ class DatabaseService:
                 )
             )
         return lang or "en"
+
+    # Group translation methods
+    async def enable_group_translation(
+        self, group_id: str, target_language: str, enabled_by: str
+    ) -> None:
+        """Enable translation for a group chat"""
+        async with self.Session() as s, s.begin():
+            settings = await s.scalar(
+                select(GroupSettings).where(GroupSettings.group_id == group_id)
+            )
+            if settings:
+                settings.translate_enabled = True
+                settings.target_language = target_language
+                settings.enabled_by = enabled_by
+                settings.updated_at = datetime.now()
+            else:
+                s.add(
+                    GroupSettings(
+                        group_id=group_id,
+                        translate_enabled=True,
+                        target_language=target_language,
+                        enabled_by=enabled_by,
+                    )
+                )
+        log.info(
+            "Enabled translation for group %s to %s", group_id[:8], target_language
+        )
+
+    async def disable_group_translation(self, group_id: str) -> None:
+        """Disable translation for a group chat"""
+        async with self.Session() as s, s.begin():
+            settings = await s.scalar(
+                select(GroupSettings).where(GroupSettings.group_id == group_id)
+            )
+            if settings:
+                settings.translate_enabled = False
+                settings.updated_at = datetime.now()
+        log.info("Disabled translation for group %s", group_id[:8])
+
+    async def get_group_settings(self, group_id: str) -> Optional[dict]:
+        """Get translation settings for a group"""
+        async with self.Session() as s:
+            settings = await s.scalar(
+                select(GroupSettings).where(GroupSettings.group_id == group_id)
+            )
+            if settings:
+                return {
+                    "translate_enabled": settings.translate_enabled,
+                    "target_language": settings.target_language,
+                    "enabled_by": settings.enabled_by,
+                }
+        return None

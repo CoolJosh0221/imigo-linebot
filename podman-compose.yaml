@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  # FastAPI Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: migrant-worker-bot
+    ports:
+      - "8000:8000"
+    environment:
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
+      - LLM_BASE_URL=http://llm:8001/v1
+      - MODEL_NAME=${MODEL_NAME:-aisingapore/sealion7b-instruct}
+      - DATABASE_URL=sqlite+aiosqlite:///data/database.db
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-id}
+    volumes:
+      - ./data:/data
+      - ./config:/app/config:ro
+    depends_on:
+      - llm
+    restart: unless-stopped
+    networks:
+      - bot-network
+
+  # vLLM Server for SEA-LION-7B
+  llm:
+    build:
+      context: .
+      dockerfile: Dockerfile.llm
+    container_name: sealion-llm
+    ports:
+      - "8001:8001"
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=0
+    volumes:
+      # Cache Hugging Face models to avoid re-downloading
+      - ./models:/root/.cache/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    networks:
+      - bot-network
+    # Increase shared memory for PyTorch
+    shm_size: 8gb
+
+networks:
+  bot-network:
+    driver: bridge
+
+volumes:
+  data:
+  models:
