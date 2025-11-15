@@ -11,6 +11,10 @@ from linebot.v3.messaging import (
     AsyncMessagingApi,
     ReplyMessageRequest,
     TextMessage,
+    LocationMessage,
+    URIAction,
+    QuickReply,
+    QuickReplyItem,
 )
 from linebot.v3.webhooks import (
     MessageEvent,
@@ -130,7 +134,7 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 async def handle_location_message(
     event: MessageEvent, user_id: str, location: LocationMessageContent
 ) -> None:
-    """Handle location messages"""
+    """Handle location messages - send text + location pins"""
     cfg = get_config()
     line_api, _ = get_line_api()
 
@@ -140,14 +144,47 @@ async def handle_location_message(
     lang = await db_service.get_user_language(user_id)
 
     # Find nearby Indonesian restaurants by default
-    response = await location_service.find_indonesian_restaurants(
+    result = await location_service.find_indonesian_restaurants(
         latitude, longitude, lang
     )
 
+    # Build messages: text summary + location pins for top places
+    messages = [TextMessage(text=result["text"])]
+
+    # Add location pins for top 3 results
+    for loc in result["locations"]:
+        if loc.get("latitude") and loc.get("longitude"):
+            # Create location pin message
+            location_msg = LocationMessage(
+                title=loc["title"][:100],  # LINE limits title to 100 chars
+                address=loc["address"][:100],  # LINE limits address to 100 chars
+                latitude=loc["latitude"],
+                longitude=loc["longitude"]
+            )
+            messages.append(location_msg)
+
+    # Add quick reply button for opening in Google Maps
+    if result["locations"]:
+        map_labels = {
+            "id": "🗺️ Buka di Maps",
+            "zh": "🗺️ 在地圖中開啟",
+            "en": "🗺️ Open in Maps",
+        }
+
+        quick_reply_items = [
+            QuickReplyItem(
+                action=URIAction(
+                    label=map_labels.get(lang, map_labels["en"]),
+                    uri=location_service.create_google_maps_url(latitude, longitude)
+                )
+            )
+        ]
+
+        # Attach quick reply to the first message
+        messages[0].quickReply = QuickReply(items=quick_reply_items)
+
     await line_api.reply_message(
-        ReplyMessageRequest(
-            reply_token=event.reply_token, messages=[TextMessage(text=response)]
-        )
+        ReplyMessageRequest(reply_token=event.reply_token, messages=messages)
     )
 
 
