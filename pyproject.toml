@@ -1,19 +1,76 @@
 [project]
 name = "imigo-linebot"
 version = "0.1.0"
-description = "Add your description here"
+description = "Indonesian Migrant Worker Assistant LINE Bot - AI-powered chatbot with location services, translation, and multi-language support for migrant workers in Taiwan"
 readme = "README.md"
-requires-python = ">=3.10"
-dependencies = [
-    "aiosqlite>=0.21.0",
-    "fastapi>=0.116.1",
-    "google-genai>=1.36.0",
-    "greenlet>=3.2.4",
-    "line-bot-sdk>=3.19.0",
-    "openai>=2.3.0",
-    "python-dotenv>=1.1.1",
-    "pyyaml>=6.0.3",
-    "requests>=2.32.5",
-    "sqlalchemy>=2.0.43",
-    "uvicorn>=0.35.0",
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Your Name", email = "your.email@example.com" }
 ]
+keywords = ["line-bot", "chatbot", "migrant-workers", "translation", "fastapi", "sea-lion"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Framework :: FastAPI",
+]
+
+dependencies = [
+    # Web Framework
+    "fastapi>=0.116.1",
+    "uvicorn[standard]>=0.35.0",
+    "python-dotenv>=1.1.1",
+
+    # LINE Bot SDK
+    "line-bot-sdk>=3.19.0",
+
+    # Database
+    "aiosqlite>=0.21.0",
+    "sqlalchemy>=2.0.43",
+    "greenlet>=3.2.4",
+
+    # LLM Client (OpenAI-compatible API for vLLM)
+    "openai>=2.3.0",
+
+    # Google Services
+    "googlemaps>=4.10.0",
+    "google-genai>=1.36.0",
+
+    # Utilities
+    "requests>=2.32.5",
+    "pyyaml>=6.0.3",
+    "attrs>=23.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.3",
+    "pytest-asyncio>=0.21.1",
+    "black>=23.12.1",
+    "ruff>=0.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/imigo-linebot"
+Repository = "https://github.com/yourusername/imigo-linebot"
+Issues = "https://github.com/yourusername/imigo-linebot/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
