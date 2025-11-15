@@ -121,10 +121,18 @@ class LocationService:
 
     async def find_indonesian_restaurants(
         self, latitude: float, longitude: float, language: str = "zh"
-    ) -> str:
-        """Find nearby Indonesian restaurants"""
+    ) -> dict:
+        """
+        Find nearby Indonesian restaurants
+
+        Returns:
+            dict with 'text' (formatted message) and 'locations' (list of place data)
+        """
         if not self.maps.is_available():
-            return self._get_maps_unavailable_message(language)
+            return {
+                "text": self._get_maps_unavailable_message(language),
+                "locations": []
+            }
 
         places = self.maps.find_nearby_places(
             latitude=latitude,
@@ -134,14 +142,35 @@ class LocationService:
             language="zh-TW" if language == "zh" else "en",
         )
 
-        return self.format_places_response(places, language)
+        return {
+            "text": self.format_places_response(places, language),
+            "locations": [
+                {
+                    "title": place.get("name", "Unknown"),
+                    "address": place.get("address", "No address"),
+                    "latitude": place.get("location", {}).get("lat"),
+                    "longitude": place.get("location", {}).get("lng"),
+                    "rating": place.get("rating"),
+                    "place_id": place.get("place_id"),
+                }
+                for place in places[:3]  # Top 3 results as location pins
+            ]
+        }
 
     async def find_nearby_hospitals(
         self, latitude: float, longitude: float, language: str = "zh"
-    ) -> str:
-        """Find nearby hospitals"""
+    ) -> dict:
+        """
+        Find nearby hospitals
+
+        Returns:
+            dict with 'text' (formatted message) and 'locations' (list of place data)
+        """
         if not self.maps.is_available():
-            return self._get_maps_unavailable_message(language)
+            return {
+                "text": self._get_maps_unavailable_message(language),
+                "locations": []
+            }
 
         places = self.maps.find_nearby_places(
             latitude=latitude,
@@ -151,14 +180,35 @@ class LocationService:
             language="zh-TW" if language == "zh" else "en",
         )
 
-        return self.format_places_response(places, language)
+        return {
+            "text": self.format_places_response(places, language),
+            "locations": [
+                {
+                    "title": place.get("name", "Unknown"),
+                    "address": place.get("address", "No address"),
+                    "latitude": place.get("location", {}).get("lat"),
+                    "longitude": place.get("location", {}).get("lng"),
+                    "rating": place.get("rating"),
+                    "place_id": place.get("place_id"),
+                }
+                for place in places[:3]  # Top 3 results as location pins
+            ]
+        }
 
     async def find_nearby_mosques(
         self, latitude: float, longitude: float, language: str = "zh"
-    ) -> str:
-        """Find nearby mosques (for Indonesian Muslim workers)"""
+    ) -> dict:
+        """
+        Find nearby mosques (for Indonesian Muslim workers)
+
+        Returns:
+            dict with 'text' (formatted message) and 'locations' (list of place data)
+        """
         if not self.maps.is_available():
-            return self._get_maps_unavailable_message(language)
+            return {
+                "text": self._get_maps_unavailable_message(language),
+                "locations": []
+            }
 
         places = self.maps.find_nearby_places(
             latitude=latitude,
@@ -168,7 +218,20 @@ class LocationService:
             language="zh-TW" if language == "zh" else "en",
         )
 
-        return self.format_places_response(places, language)
+        return {
+            "text": self.format_places_response(places, language),
+            "locations": [
+                {
+                    "title": place.get("name", "Unknown"),
+                    "address": place.get("address", "No address"),
+                    "latitude": place.get("location", {}).get("lat"),
+                    "longitude": place.get("location", {}).get("lng"),
+                    "rating": place.get("rating"),
+                    "place_id": place.get("place_id"),
+                }
+                for place in places[:3]  # Top 3 results as location pins
+            ]
+        }
 
     async def get_directions_to_place(
         self,
@@ -199,3 +262,23 @@ class LocationService:
             "en": "⚠️ Location service is unavailable. Google Maps API key not configured.",
         }
         return messages.get(language, messages["en"])
+
+    @staticmethod
+    def create_google_maps_url(latitude: float, longitude: float, place_id: str = None) -> str:
+        """
+        Create Google Maps URL for opening in user's maps app
+
+        Args:
+            latitude: Location latitude
+            longitude: Location longitude
+            place_id: Optional Google Place ID for more accurate results
+
+        Returns:
+            Google Maps URL that works on mobile devices
+        """
+        if place_id:
+            # Use place_id for most accurate results
+            return f"https://www.google.com/maps/search/?api=1&query=Google&query_place_id={place_id}"
+        else:
+            # Fallback to coordinates
+            return f"https://www.google.com/maps/search/?api=1&query={latitude},{longitude}"
