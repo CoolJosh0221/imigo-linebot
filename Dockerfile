@@ -13,9 +13,9 @@ RUN apt-get update && \
 # Copy pyproject.toml first (for better caching)
 COPY pyproject.toml .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -e .
+# Install Python dependencies directly from pyproject.toml
+RUN pip install --no-cache-dir --upgrade pip uv && \
+    uv pip install --system -r pyproject.toml
 
 # Copy application code
 COPY . .
