@@ -1,45 +1,66 @@
 bot:
-  name: "Migrant Worker Helper"
+  name: "Imigo - Migrant Worker Assistant"
   language: en
   country: international
 
 messages:
   welcome: |
-    👋 Hello! I'm here to help migrant workers in Taiwan.
+    👋 Hello! I'm Imigo, your assistant for migrant workers in Taiwan.
 
-    I can help with:
-    - Healthcare services
-    - Labor rights
-    - Daily life
-    - Translation
+    🔧 MVP Features:
+    - 💬 Translation (English ↔ 中文 ↔ Indonesia)
+    - 📍 Location (Restaurants, Mosques, Hospitals, Banks)
 
-    Ask me anything!
+    Use the menu below to find places or send a message for translation!
 
   help: |
-    📋 I can help with:
-    - Health and hospital information
-    - Worker rights
-    - Daily life in Taiwan
-    - Translation
+    📋 How to use Imigo:
 
-    Ask me in English!
+    💬 Personal Translation:
+    - Send any message to translate
+    - Choose language from menu
+
+    📍 Find Places:
+    - 🍽️ Food: Indonesian restaurants, halal food
+    - 🏥 Health: Hospitals, clinics, pharmacies
+    - 🕌 Community: Mosques, churches, community centers
+    - 🚨 Emergency: Police, fire stations, immigration
+    - 💰 Services: ATMs, remittance, banks
+
+    👥 Group Translation (For Employers):
+    - /translate on <language> - Enable auto-translation
+    - /translate off - Disable translation
 
   cleared: "✅ Chat history cleared"
 
-  unknown_command: "❓ Unknown command"
+  unknown_command: "❓ Unknown command. Type 'help' for assistance."
 
   error: "Sorry, an error occurred. Please try again."
 
+  translation_enabled: "✅ Group translation enabled to {language}"
+
+  translation_disabled: "✅ Group translation disabled"
+
+  admin_only: "⚠️ Only group admins can change translation settings"
+
+  location_searching: "🔍 Searching for nearby {category}..."
+
+  location_not_found: "❌ Could not find {category} near you"
+
 emergency:
-  police: "110"
-  ambulance: "119"
-  labor_hotline: "1955"
+  police: "110 (Police)"
+  ambulance: "119 (Ambulance)"
+  labor_hotline: "1955 (Labor Hotline)"
   info: "Ministry of Labor: 1955"
+  fire: "119 (Fire Department)"
+  immigration: "Immigration: 02-2388-9393"
 
 quick_replies:
-  - label: "🏥 Health"
-    text: "I need health assistance"
-  - label: "💼 Work Rights"
-    text: "I have a work problem"
-  - label: "🚨 Emergency"
-    text: "This is an emergency!"
+  - label: "🍽️ Food"
+    text: "Find nearby Indonesian restaurant"
+  - label: "🕌 Mosque"
+    text: "Find nearby mosque"
+  - label: "🏥 Hospital"
+    text: "Find nearby hospital"
+  - label: "💰 ATM"
+    text: "Find nearby ATM"

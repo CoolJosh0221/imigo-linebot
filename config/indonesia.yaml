@@ -1,46 +1,67 @@
 bot:
-  name: "Pekerja Indonesia di Taiwan"
+  name: "Imigo - Asisten Pekerja Indonesia"
   language: id
   country: indonesia
 
 messages:
   welcome: |
-    👋 Halo! Saya asisten untuk pekerja Indonesia di Taiwan.
+    👋 Halo! Saya Imigo, asisten untuk pekerja Indonesia di Taiwan.
 
-    Saya bisa membantu dengan:
-    - Layanan kesehatan
-    - Hak tenaga kerja
-    - Kehidupan sehari-hari
-    - Terjemahan
+    🔧 Fitur MVP:
+    - 💬 Terjemahan (Indonesia ↔ 中文 ↔ English)
+    - 📍 Lokasi (Restoran, Masjid, Rumah Sakit, Bank)
 
-    Tanyakan apa saja!
+    Gunakan menu di bawah untuk mencari tempat atau kirim pesan untuk terjemahan!
 
   help: |
-    📋 Saya bisa membantu Anda dengan:
-    - Informasi kesehatan dan rumah sakit
-    - Hak pekerja dan masalah di tempat kerja
-    - Kehidupan sehari-hari di Taiwan
-    - Terjemahan
+    📋 Cara menggunakan Imigo:
 
-    Tanyakan apa saja dalam Bahasa Indonesia!
+    💬 Terjemahan Pribadi:
+    - Kirim pesan apa saja untuk diterjemahkan
+    - Pilih bahasa dari menu
+
+    📍 Cari Tempat:
+    - 🍽️ Makanan: Restoran Indonesia, makanan halal
+    - 🏥 Kesehatan: Rumah sakit, klinik, apotek
+    - 🕌 Komunitas: Masjid, gereja, pusat komunitas
+    - 🚨 Darurat: Polisi, pemadam kebakaran, imigrasi
+    - 💰 Layanan: ATM, pengiriman uang, bank
+
+    👥 Terjemahan Grup (Untuk Majikan):
+    - /translate on <bahasa> - Aktifkan terjemahan otomatis
+    - /translate off - Matikan terjemahan
 
   cleared: "✅ Riwayat percakapan telah dihapus"
 
-  unknown_command: "❓ Perintah tidak dikenal."
+  unknown_command: "❓ Perintah tidak dikenal. Ketik 'help' untuk bantuan."
 
   error: "Maaf, ada kesalahan. Silakan coba lagi."
 
+  translation_enabled: "✅ Terjemahan grup diaktifkan ke {language}"
+
+  translation_disabled: "✅ Terjemahan grup dimatikan"
+
+  admin_only: "⚠️ Hanya admin grup yang bisa mengubah pengaturan terjemahan"
+
+  location_searching: "🔍 Mencari {category} terdekat..."
+
+  location_not_found: "❌ Tidak menemukan {category} di sekitar Anda"
+
 emergency:
-  police: "110"
-  ambulance: "119"
-  labor_hotline: "1955"
+  police: "110 (Polisi)"
+  ambulance: "119 (Ambulans)"
+  labor_hotline: "1955 (Hotline Buruh)"
   embassy: "KDEI Taipei: 02-2720-0100"
   consular: "Layanan Konsuler: 02-2720-0101"
+  fire: "119 (Pemadam Kebakaran)"
+  immigration: "Imigrasi: 02-2388-9393"
 
 quick_replies:
-  - label: "🏥 Kesehatan"
-    text: "Saya butuh bantuan kesehatan"
-  - label: "💼 Hak Kerja"
-    text: "Saya punya masalah di tempat kerja"
-  - label: "🚨 Darurat"
-    text: "Ini darurat!"
+  - label: "🍽️ Makanan"
+    text: "Cari restoran Indonesia terdekat"
+  - label: "🕌 Masjid"
+    text: "Cari masjid terdekat"
+  - label: "🏥 Rumah Sakit"
+    text: "Cari rumah sakit terdekat"
+  - label: "💰 ATM"
+    text: "Cari ATM terdekat"

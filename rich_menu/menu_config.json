@@ -4,8 +4,8 @@
     "height": 1686
   },
   "selected": true,
-  "name": "Migrant Worker Complete Menu",
-  "chatBarText": "Tap for Help 點擊求助",
+  "name": "Imigo MVP Menu",
+  "chatBarText": "Menu 選單",
   "areas": [
     {
       "bounds": {
@@ -16,7 +16,8 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_healthcare"
+        "data": "location_food",
+        "displayText": "🍽️ Find Indonesian food"
       }
     },
     {
@@ -28,7 +29,8 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_labor"
+        "data": "location_health",
+        "displayText": "🏥 Find hospital"
       }
     },
     {
@@ -40,7 +42,8 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_language"
+        "data": "location_community",
+        "displayText": "🕌 Find mosque/community"
       }
     },
     {
@@ -52,7 +55,8 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_emergency"
+        "data": "location_emergency",
+        "displayText": "🚨 Emergency services"
       }
     },
     {
@@ -64,7 +68,8 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_government"
+        "data": "location_services",
+        "displayText": "💰 Find ATM/Bank"
       }
     },
     {
@@ -76,7 +81,8 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_daily"
+        "data": "change_language",
+        "displayText": "🌐 Change language"
       }
     },
     {
@@ -87,8 +93,8 @@
         "height": 422
       },
       "action": {
-        "type": "postback",
-        "data": "category_translate"
+        "type": "message",
+        "text": "Please translate this message"
       }
     },
     {
@@ -100,7 +106,8 @@
       },
       "action": {
         "type": "postback",
-        "data": "clear_chat"
+        "data": "clear_chat",
+        "displayText": "🧹 Clear chat"
       }
     }
   ]

@@ -1,45 +1,66 @@
 bot:
-  name: "移工小幫手"
+  name: "Imigo - 移工翻譯小幫手"
   language: zh
   country: taiwan
 
 messages:
   welcome: |
-    👋 你好！我是協助在台移工的小幫手。
+    👋 你好！我是 Imigo，協助在台移工的翻譯小幫手。
 
-    我可以幫忙：
-    - 醫療服務
-    - 勞工權益
-    - 日常生活
-    - 翻譯
+    🔧 MVP 功能：
+    - 💬 翻譯（中文 ↔ Indonesia ↔ English）
+    - 📍 位置（餐廳、清真寺、醫院、銀行）
 
-    歡迎提問！
+    使用下方選單尋找地點，或傳送訊息進行翻譯！
 
   help: |
-    📋 我可以協助：
-    - 醫療和醫院資訊
-    - 勞工權益
-    - 在台生活資訊
-    - 翻譯
+    📋 如何使用 Imigo：
 
-    用中文問我！
+    💬 個人翻譯：
+    - 傳送任何訊息進行翻譯
+    - 從選單選擇語言
+
+    📍 尋找地點：
+    - 🍽️ 美食：印尼餐廳、清真食品
+    - 🏥 醫療：醫院、診所、藥局
+    - 🕌 社群：清真寺、教堂、社區中心
+    - 🚨 緊急：警察、消防、移民署
+    - 💰 服務：ATM、匯款、銀行
+
+    👥 群組翻譯（雇主專用）：
+    - /translate on <語言> - 開啟自動翻譯
+    - /translate off - 關閉翻譯
 
   cleared: "✅ 對話記錄已清除"
 
-  unknown_command: "❓ 未知指令"
+  unknown_command: "❓ 未知指令。輸入 'help' 取得說明。"
 
   error: "抱歉，發生錯誤。請重試。"
 
+  translation_enabled: "✅ 群組翻譯已啟用至 {language}"
+
+  translation_disabled: "✅ 群組翻譯已關閉"
+
+  admin_only: "⚠️ 只有群組管理員可以變更翻譯設定"
+
+  location_searching: "🔍 搜尋附近的 {category}..."
+
+  location_not_found: "❌ 找不到附近的 {category}"
+
 emergency:
-  police: "110"
-  ambulance: "119"
-  labor_hotline: "1955"
+  police: "110（警察）"
+  ambulance: "119（救護車）"
+  labor_hotline: "1955（勞工專線）"
   local_office: "勞動部專線: 1955"
+  fire: "119（消防）"
+  immigration: "移民署: 02-2388-9393"
 
 quick_replies:
-  - label: "🏥 醫療"
-    text: "我需要醫療協助"
-  - label: "💼 勞權"
-    text: "我有工作問題"
-  - label: "🚨 緊急"
-    text: "這是緊急情況！"
+  - label: "🍽️ 美食"
+    text: "尋找附近的印尼餐廳"
+  - label: "🕌 清真寺"
+    text: "尋找附近的清真寺"
+  - label: "🏥 醫院"
+    text: "尋找附近的醫院"
+  - label: "💰 ATM"
+    text: "尋找附近的 ATM"

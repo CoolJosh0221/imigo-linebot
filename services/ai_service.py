@@ -8,19 +8,22 @@ logger = logging.getLogger(__name__)
 
 
 class AIService:
+    """AI service for conversation and assistance (MVP: 3 languages only)"""
+
     def __init__(self, db_service: DatabaseService, config: BotConfig):
         self.db_service = db_service
         self.config = config
         self.client = self._init_client()
-        self.model_name = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-9B-Instruct")
+        # MVP: Default to SEA-LION-7B (optimized for Indonesian)
+        self.model_name = os.getenv(
+            "MODEL_NAME", "aisingapore/sea-lion-7b-instruct"
+        )
 
+        # MVP: Only 3 languages
         self.languages = {
-            "en": "English",
-            "zh": "繁體中文",
             "id": "Bahasa Indonesia",
-            "vi": "Tiếng Việt",
-            "th": "ภาษาไทย",
-            "fil": "Tagalog",
+            "zh": "繁體中文 (Traditional Chinese)",
+            "en": "English",
         }
 
     def _init_client(self) -> AsyncOpenAI:
@@ -35,25 +38,37 @@ class AIService:
         return AsyncOpenAI(base_url=base_url, api_key=api_key)
 
     def _get_system_prompt(self) -> str:
-        bot_identity = f"""You are {self.config.bot.name}, a helpful assistant for {self.config.bot.country} migrant workers in Taiwan.
+        """Generate system prompt for MVP (Translation + Location focus)"""
+        bot_identity = f"""You are {self.config.bot.name}, a helpful assistant for Indonesian migrant workers in Taiwan.
 Your primary language is {self.languages.get(self.config.bot.language, self.config.bot.language)}."""
 
         return f"""{bot_identity}
 
+MVP FEATURES
+1. Translation assistance (Indonesian ↔ Chinese ↔ English)
+2. Location-based help (restaurants, mosques, hospitals, banks, ATMs)
+3. General conversation and support
+
 AUDIENCE
-Adult migrant workers from {self.config.bot.country} in Taiwan. Help with healthcare, labor rights, daily life, and translation.
+Indonesian migrant workers in Taiwan. Most are domestic workers and caregivers.
 
 LANGUAGE
 - Respond ONLY in {self.languages.get(self.config.bot.language)}.
-- Keep it simple. Short sentences. No jargon.
+- Keep it simple and conversational.
+- Use natural, everyday language.
+
+TRANSLATION
+- When users send messages for translation, translate naturally.
+- Preserve tone and intent.
+- Don't add explanations unless asked.
+
+LOCATION HELP
+- For location queries, acknowledge and explain that they should use the menu buttons.
+- Menu categories: Food (🍽️), Health (🏥), Community (🕌), Emergency (🚨), Services (💰).
 
 FORMAT
 - Plain text only. Use hyphens (-) for lists.
-- Phone numbers and addresses on separate lines.
-
-SAFETY
-- If unsure, tell users to check with official sources.
-- Add disclaimers for medical, legal, or safety topics.
+- Keep responses concise (2-4 sentences max for simple queries).
 
 EMERGENCY NUMBERS
 - Police: 110
@@ -61,8 +76,8 @@ EMERGENCY NUMBERS
 - Labor Hotline: 1955
 
 STYLE
-- Be practical and supportive.
-- Give 2-4 clear next steps.
+- Be friendly and supportive.
+- Be practical and direct.
 - Use ALL CAPS for emphasis, not bold/italic."""
 
     async def generate_response(self, user_id: str, message: str) -> str:
@@ -74,7 +89,8 @@ STYLE
         for msg in history:
             messages.append({"role": msg["role"], "content": msg["content"]})
 
-        language_name = self.languages.get(user_language, "English")
+        # MVP: Default to Indonesian if language not found
+        language_name = self.languages.get(user_language, "Bahasa Indonesia")
         messages.append(
             {"role": "user", "content": f"[Respond in {language_name}]\n\n{message}"}
         )

@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from database.models import Base, Conversation, UserPreferences
+from database.models import Base, Conversation, UserPreferences, GroupSettings
 
 log = logging.getLogger(__name__)
 
@@ -89,4 +89,45 @@ class DatabaseService:
                     UserPreferences.user_id == user_id
                 )
             )
-        return lang or "en"
+        return lang or "id"  # Default: Indonesian
+
+    # Group chat settings methods (MVP)
+    async def set_group_translation(
+        self, group_id: str, enabled: bool, target_language: Optional[str] = None
+    ) -> None:
+        """Enable/disable translation for a group and set target language."""
+        async with self.Session() as s, s.begin():
+            settings = await s.scalar(
+                select(GroupSettings).where(GroupSettings.group_id == group_id)
+            )
+            if settings:
+                settings.translation_enabled = enabled
+                settings.target_language = target_language
+                settings.updated_at = datetime.now()
+            else:
+                s.add(
+                    GroupSettings(
+                        group_id=group_id,
+                        translation_enabled=enabled,
+                        target_language=target_language,
+                    )
+                )
+        log.info(
+            "Set group %s translation=%s, lang=%s",
+            group_id[:8],
+            enabled,
+            target_language,
+        )
+
+    async def get_group_settings(self, group_id: str) -> Optional[dict]:
+        """Get group translation settings."""
+        async with self.Session() as s:
+            settings = await s.scalar(
+                select(GroupSettings).where(GroupSettings.group_id == group_id)
+            )
+        if settings:
+            return {
+                "translation_enabled": settings.translation_enabled,
+                "target_language": settings.target_language,
+            }
+        return None
