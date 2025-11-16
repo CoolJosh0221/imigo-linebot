@@ -1,14 +1,14 @@
-# Indonesian Migrant Worker Assistant LINE Bot
+# Indonesian Migrant Worker Assistant LINE Bot (MVP)
 
-A comprehensive LINE chatbot designed to help Indonesian migrant workers in Taiwan with healthcare, labor rights, daily life assistance, and translation services.
+A minimal LINE chatbot for Indonesian migrant workers in Taiwan with AI conversation and group translation features.
 
 ## Features
 
 ### 🤖 AI-Powered Assistance
 
 - **Conversational AI**: Powered by SEA-LION-7B, optimized for Southeast Asian languages
-- **Multi-language Support**: Indonesian, Traditional Chinese, English, Vietnamese, Thai, Filipino
-- **Context-aware Responses**: Maintains conversation history for better assistance
+- **Multi-language Support**: Indonesian, Traditional Chinese, English
+- **Context-aware Responses**: Maintains conversation history
 
 ### 📍 Location Services
 
@@ -34,18 +34,15 @@ A comprehensive LINE chatbot designed to help Indonesian migrant workers in Taiw
 - Labor Rights
 - Language Settings
 - Emergency Contacts
-- Government Services
-- Daily Life Help
-- Translation
+- Language Settings
 - Clear Chat History
 
 ## Technology Stack
 
 - **Backend**: FastAPI 0.116.1 (Python 3.11+)
 - **LLM**: SEA-LION-7B-Instruct via vLLM
-- **Database**: SQLAlchemy + aiosqlite (SQLite for MVP)
+- **Database**: SQLAlchemy + aiosqlite (SQLite)
 - **LINE SDK**: line-bot-sdk 3.19.0
-- **Maps**: Google Maps Platform APIs
 - **Containerization**: Docker/Podman
 
 ## Prerequisites
@@ -69,47 +66,43 @@ A comprehensive LINE chatbot designed to help Indonesian migrant workers in Taiw
 ```bash
 git clone <repository-url>
 cd imigo-linebot
-````
+```
 
-### 2\. Environment Setup
-
+### 2. Environment Setup
 ```bash
-# Copy environment template
 cp .env.example .env
-
 # Edit .env with your credentials
 nano .env
 ```
 
 Required environment variables:
-
 ```env
 LINE_CHANNEL_SECRET=your_channel_secret
 LINE_CHANNEL_ACCESS_TOKEN=your_channel_access_token
-GOOGLE_MAPS_API_KEY=your_google_maps_key
 DEFAULT_LANGUAGE=id
 ```
 
-### 3\. Install Dependencies
+### 3. Install Dependencies
 
-#### Option A: Using pip
+#### Using uv (recommended)
+```bash
+uv venv
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate  # Windows
 
+uv pip install -r pyproject.toml
+```
+
+#### Using pip
 ```bash
 python3.11 -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
+source venv/bin/activate
+pip install fastapi uvicorn line-bot-sdk aiosqlite sqlalchemy openai pyyaml attrs python-dotenv
 ```
 
-#### Option B: Using uv (faster)
-
-```bash
-uv sync
-```
-
-### 4\. Run the Bot
+### 4. Run the Bot
 
 #### Development (Local)
-
 ```bash
 # Terminal 1: Start vLLM server
 python -m vllm.entrypoints.openai.api_server \
@@ -125,32 +118,16 @@ ngrok http 8000
 ```
 
 #### Production (Docker)
-
 ```bash
-# Build and start all services
 docker-compose up -d
-
-# View logs
-docker-compose logs -f
-
-# Stop services
-docker-compose down
 ```
 
 #### Production (Podman)
-
 ```bash
-# Build and start all services
 podman-compose up -d
-
-# View logs
-podman-compose logs -f
-
-# Stop services
-podman-compose down
 ```
 
-### 5\. Configure LINE Webhook
+### 5. Configure LINE Webhook
 
 1. Go to [LINE Developers Console](https://developers.line.biz/console/)
 2. Select your Messaging API channel
@@ -162,31 +139,23 @@ podman-compose down
 
 ```text
 imigo-linebot/
-├── main.py               # FastAPI application & webhook handler
-├── config.py             # Configuration management
-├── requirements.txt      # Python dependencies
-├── Dockerfile            # Backend container
-├── Dockerfile.llm        # vLLM server container
-├── docker-compose.yaml   # Docker orchestration
-├── podman-compose.yaml   # Podman orchestration
-├── .env.example          # Environment template
+├── main.py                 # FastAPI application & webhook handler
+├── config.py               # Configuration management
+├── pyproject.toml          # Project dependencies
+├── Dockerfile              # Backend container
+├── Dockerfile.llm          # vLLM server container
+├── docker-compose.yaml     # Docker orchestration
+├── .env.example            # Environment template
 ├── database/
-│   ├── models.py         # SQLAlchemy models
-│   └── database.py       # Database service
+│   ├── models.py           # SQLAlchemy models
+│   └── database.py         # Database service
 ├── services/
-│   ├── ai_service.py         # LLM conversation service
-│   ├── translation_service.py  # Translation service
-│   ├── maps_service.py       # Google Maps integration
-│   └── location_service.py   # Location queries
-├── config/
-│   ├── indonesia.yaml    # Indonesian bot config
-│   ├── chinese.yaml      # Chinese bot config
-│   ├── english.yaml      # English bot config
-│   ├── philippines.yaml  # Filipino bot config
-│   ├── vietnam.yaml      # Vietnamese bot config
-│   └── thailand.yaml     # Thai bot config
-└── rich_menu/
-    └── menu_config.json  # Rich menu layout
+│   ├── ai_service.py       # LLM conversation service
+│   └── translation_service.py  # Translation service
+└── config/
+    ├── indonesia.yaml      # Indonesian bot config
+    ├── chinese.yaml        # Chinese bot config
+    └── english.yaml        # English bot config
 ```
 
 ## API Endpoints
@@ -213,6 +182,11 @@ imigo-linebot/
 - `updated_at`: Last update time
 
 ### Group Settings
+- `group_id`: LINE group ID (primary key)
+- `translate_enabled`: Translation enabled flag
+- `target_language`: Target language for translation
+- `enabled_by`: User who enabled translation
+- `created_at`, `updated_at`: Timestamps
 
 - `group_id`: LINE group ID (primary key)
 - `translate_enabled`: Translation enabled flag
@@ -258,7 +232,8 @@ Users can change their language preference:
 
 ## Google Maps Integration
 
-### Required APIs
+### Private Chat (1-on-1)
+User sends message → AI responds in their preferred language
 
 1. Places API (Nearby Search)
 2. Geocoding API
@@ -292,6 +267,7 @@ Users can change their language preference:
 
 ### Alternative: OpenAI API
 
+### OpenAI API (Alternative for Development)
 ```env
 LLM_API_KEY=sk-your-openai-key
 # Leave LLM_BASE_URL empty to use OpenAI
@@ -358,26 +334,15 @@ watch -n 1 nvidia-smi
 ## Development
 
 ### Running Tests
-
 ```bash
+uv pip install -r pyproject.toml --extra dev
 pytest
 ```
 
 ### Code Formatting
-
 ```bash
 black .
-```
-
-### Database Migrations
-
-Currently using SQLAlchemy auto-migration. For production, consider Alembic:
-
-```bash
-pip install alembic
-alembic init migrations
-alembic revision --autogenerate -m "Initial migration"
-alembic upgrade head
+ruff check .
 ```
 
 ## Troubleshooting
