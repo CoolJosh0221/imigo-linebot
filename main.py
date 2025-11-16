@@ -11,22 +11,16 @@ from linebot.v3.messaging import (
     AsyncMessagingApi,
     ReplyMessageRequest,
     TextMessage,
-    LocationMessage,
-    URIAction,
-    QuickReply,
-    QuickReplyItem,
 )
 from linebot.v3.webhooks import (
     MessageEvent,
     TextMessageContent,
     PostbackEvent,
-    LocationMessageContent,
 )
 
 from database.database import DatabaseService
 from services.ai_service import AIService
 from services.translation_service import TranslationService
-from services.location_service import LocationService
 from config import load_config, get_config
 
 logging.basicConfig(level=logging.INFO)
@@ -35,14 +29,13 @@ log = logging.getLogger(__name__)
 db_service: DatabaseService
 ai_service: AIService
 translation_service: TranslationService
-location_service: LocationService
 
 app = FastAPI()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_service, ai_service, translation_service, location_service
+    global db_service, ai_service, translation_service
 
     cfg = load_config()
 
@@ -50,7 +43,6 @@ async def lifespan(app: FastAPI):
     await db_service.init_db()
     ai_service = AIService(db_service, cfg)
     translation_service = TranslationService(cfg)
-    location_service = LocationService(cfg)
 
     log.info(f"{cfg.bot.name} started ({cfg.bot.language})")
     yield
@@ -131,63 +123,6 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
     )
 
 
-async def handle_location_message(
-    event: MessageEvent, user_id: str, location: LocationMessageContent
-) -> None:
-    """Handle location messages - send text + location pins"""
-    cfg = get_config()
-    line_api, _ = get_line_api()
-
-    latitude = location.latitude
-    longitude = location.longitude
-
-    lang = await db_service.get_user_language(user_id)
-
-    # Find nearby Indonesian restaurants by default
-    result = await location_service.find_indonesian_restaurants(
-        latitude, longitude, lang
-    )
-
-    # Build messages: text summary + location pins for top places
-    messages = [TextMessage(text=result["text"])]
-
-    # Add location pins for top 3 results
-    for loc in result["locations"]:
-        if loc.get("latitude") and loc.get("longitude"):
-            # Create location pin message
-            location_msg = LocationMessage(
-                title=loc["title"][:100],  # LINE limits title to 100 chars
-                address=loc["address"][:100],  # LINE limits address to 100 chars
-                latitude=loc["latitude"],
-                longitude=loc["longitude"]
-            )
-            messages.append(location_msg)
-
-    # Add quick reply button for opening in Google Maps
-    if result["locations"]:
-        map_labels = {
-            "id": "🗺️ Buka di Maps",
-            "zh": "🗺️ 在地圖中開啟",
-            "en": "🗺️ Open in Maps",
-        }
-
-        quick_reply_items = [
-            QuickReplyItem(
-                action=URIAction(
-                    label=map_labels.get(lang, map_labels["en"]),
-                    uri=location_service.create_google_maps_url(latitude, longitude)
-                )
-            )
-        ]
-
-        # Attach quick reply to the first message
-        messages[0].quickReply = QuickReply(items=quick_reply_items)
-
-    await line_api.reply_message(
-        ReplyMessageRequest(reply_token=event.reply_token, messages=messages)
-    )
-
-
 async def handle_postback(event: PostbackEvent) -> None:
     """Handle postback events from rich menu"""
     cfg = get_config()
@@ -217,20 +152,6 @@ async def handle_postback(event: PostbackEvent) -> None:
             )
         )
 
-    elif data == "category_healthcare":
-        lang = await db_service.get_user_language(user_id)
-        messages = {
-            "id": "🏥 Untuk mencari rumah sakit terdekat, kirim lokasi Anda dengan klik 📎 > Lokasi",
-            "zh": "🏥 要尋找附近的醫院，請點擊 📎 > 位置 發送您的位置",
-            "en": "🏥 To find nearby hospitals, send your location by clicking 📎 > Location",
-        }
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=messages.get(lang, messages["en"]))],
-            )
-        )
-
     elif data == "category_language":
         lang = await db_service.get_user_language(user_id)
         messages = {
@@ -252,6 +173,7 @@ async def handle_postback(event: PostbackEvent) -> None:
             "category_government": "I need information about government services",
             "category_daily": "I need help with daily life",
             "category_translate": "I need translation help",
+            "category_healthcare": "I need healthcare information",
         }
 
         prompt = prompts.get(data, cfg.get_message("help"))
@@ -265,13 +187,11 @@ async def handle_postback(event: PostbackEvent) -> None:
 
 
 async def handle_message(event: MessageEvent) -> None:
-    """Route message events to appropriate handlers"""
+    """Handle text messages only"""
     user_id = event.source.user_id
 
     if isinstance(event.message, TextMessageContent):
         await handle_text_message(event, user_id, event.message.text)
-    elif isinstance(event.message, LocationMessageContent):
-        await handle_location_message(event, user_id, event.message)
     else:
         log.info(f"Unhandled message type: {type(event.message)}")
 

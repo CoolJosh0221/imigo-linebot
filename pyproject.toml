@@ -21,12 +21,7 @@ dependencies = [
     # LLM Client (OpenAI-compatible API for vLLM)
     "openai>=2.3.0",
 
-    # Google Services
-    "googlemaps>=4.10.0",
-    "google-genai>=1.36.0",
-
     # Utilities
-    "requests>=2.32.5",
     "pyyaml>=6.0.3",
     "attrs>=23.0.0",
 ]

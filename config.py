@@ -29,7 +29,6 @@ class BotConfig:
     llm_base_url: str
     model_name: str
     db_url: str
-    google_maps_api_key: Optional[str] = None
 
     @classmethod
     def load(cls, config_file: str = None) -> "BotConfig":
@@ -54,7 +53,6 @@ class BotConfig:
             llm_base_url=os.getenv("LLM_BASE_URL", "http://localhost:8000/v1"),
             model_name=os.getenv("MODEL_NAME", "Qwen/Qwen2.5-9B-Instruct"),
             db_url=os.getenv("DATABASE_URL", "sqlite+aiosqlite:///database.db"),
-            google_maps_api_key=os.getenv("GOOGLE_MAPS_API_KEY"),
         )
 
     def get_message(self, key: str) -> str:
