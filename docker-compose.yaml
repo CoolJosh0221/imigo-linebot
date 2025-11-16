@@ -1,5 +1,4 @@
 version: '3.8'
-
 services:
   # FastAPI Backend Service
   backend:
@@ -12,7 +11,7 @@ services:
     environment:
       - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
-      - LLM_BASE_URL=http://llm:8001/v1
+      - LLM_BASE_URL=http://vllm:8001/v1
       - MODEL_NAME=${MODEL_NAME:-aisingapore/sealion7b-instruct}
       - DATABASE_URL=sqlite+aiosqlite:///data/database.db
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
@@ -21,42 +20,45 @@ services:
       - ./data:/data
       - ./config:/app/config:ro
     depends_on:
-      - llm
+      - vllm
     restart: unless-stopped
     networks:
       - bot-network
 
   # vLLM Server for SEA-LION-7B
-  llm:
-    build:
-      context: .
-      dockerfile: Dockerfile.llm
-    container_name: sealion-llm
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: vllm
     ports:
-      - "8001:8001"
-    environment:
-      - CUDA_VISIBLE_DEVICES=0
-      - NVIDIA_VISIBLE_DEVICES=0
+      - "8001:8000"
     volumes:
-      # Cache Hugging Face models to avoid re-downloading
-      - ./models:/root/.cache/huggingface
+      - ./models:/models
+    command:
+      - "--model"
+      - "/models/sealion-model"
+      - "--dtype"
+      - "bfloat16" 
+      - "--gpu-memory-utilization"
+      - "0.85"
+      - "--max-model-len"
+      - "16384"
+      - "--trust-remote-code"
+      - "--enforce-eager"
+    environment:
+      NVIDIA_VISIBLE_DEVICES: all
     deploy:
       resources:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [gpu]
+    tty: true
+    ipc: host
     restart: unless-stopped
     networks:
       - bot-network
-    # Increase shared memory for PyTorch
-    shm_size: 8gb
 
 networks:
   bot-network:
     driver: bridge
-
-volumes:
-  data:
-  models:

@@ -9,6 +9,7 @@ from linebot.v3.messaging import (
     Configuration,
     AsyncApiClient,
     AsyncMessagingApi,
+    MarkMessagesAsReadByTokenRequest,
     ReplyMessageRequest,
     TextMessage,
 )
@@ -30,35 +31,54 @@ db_service: DatabaseService
 ai_service: AIService
 translation_service: TranslationService
 
+line_async_client: AsyncApiClient
+line_messaging_api: AsyncMessagingApi
+line_parser: WebhookParser
+
 app = FastAPI()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global db_service, ai_service, translation_service
+    global line_async_client, line_messaging_api, line_parser
 
     cfg = load_config()
 
+    # database
     db_service = DatabaseService()
     await db_service.init_db()
+
+    # AI and translation
     ai_service = AIService(db_service, cfg)
     translation_service = TranslationService(cfg)
 
-    log.info(f"{cfg.bot.name} started ({cfg.bot.language})")
-    yield
+    line_config = Configuration(access_token=cfg.line_token)
+    line_async_client = AsyncApiClient(line_config)
+    line_messaging_api = AsyncMessagingApi(line_async_client)
+    line_parser = WebhookParser(cfg.line_secret)
 
-    await db_service.dispose()
-    log.info("Services closed")
+    log.info(f"{cfg.bot.name} started ({cfg.bot.language})")
+
+    try:
+        yield
+    finally:
+        # close AI client
+        await ai_service.aclose()
+
+        # close LINE async client
+        await line_async_client.close()
+
+        # close DB
+        await db_service.dispose()
+        log.info("Services closed")
 
 
 app.router.lifespan_context = lifespan
 
 
 def get_line_api():
-    cfg = get_config()
-    line_config = Configuration(access_token=cfg.line_token)
-    async_client = AsyncApiClient(line_config)
-    return AsyncMessagingApi(async_client), WebhookParser(cfg.line_secret)
+    return line_messaging_api, line_parser
 
 
 @app.get("/")
@@ -78,14 +98,18 @@ async def health():
 
 
 async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
-    """Handle text messages in personal and group chats"""
     cfg = get_config()
     line_api, _ = get_line_api()
 
-    # Check if this is a group chat
+    # Mark message as read
+    await line_api.mark_messages_as_read_by_token(
+        mark_messages_as_read_by_token_request=MarkMessagesAsReadByTokenRequest(
+            markAsReadToken=event.message.mark_as_read_token
+        ),
+    )
+
     group_id = getattr(event.source, "group_id", None)
     if group_id:
-        # Handle group translation
         group_settings = await db_service.get_group_settings(group_id)
         if group_settings and group_settings.get("translate_enabled"):
             target_lang = group_settings.get("target_language", "zh")
@@ -124,7 +148,6 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 
 
 async def handle_postback(event: PostbackEvent) -> None:
-    """Handle postback events from rich menu"""
     cfg = get_config()
     line_api, _ = get_line_api()
 
@@ -133,7 +156,6 @@ async def handle_postback(event: PostbackEvent) -> None:
 
     log.info(f"Postback event: {data} from user {user_id[:8]}")
 
-    # Handle different postback actions
     if data == "clear_chat":
         await db_service.clear_user_conversation(user_id)
         await line_api.reply_message(
@@ -167,7 +189,6 @@ async def handle_postback(event: PostbackEvent) -> None:
         )
 
     else:
-        # For other categories, trigger AI conversation
         prompts = {
             "category_labor": "I have a problem at work",
             "category_government": "I need information about government services",
@@ -187,7 +208,6 @@ async def handle_postback(event: PostbackEvent) -> None:
 
 
 async def handle_message(event: MessageEvent) -> None:
-    """Handle text messages only"""
     user_id = event.source.user_id
 
     if isinstance(event.message, TextMessageContent):

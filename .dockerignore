@@ -48,6 +48,7 @@ podman-compose*.yaml
 
 # Models (will be mounted as volume)
 models/
+sealion-model/
 
 # Data (will be mounted as volume)
 data/

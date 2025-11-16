@@ -1,390 +1,156 @@
-# Indonesian Migrant Worker Assistant LINE Bot (MVP)
+---
+library_name: transformers
+pipeline_tag: text-generation
+base_model:
+- aisingapore/Llama-SEA-LION-v3-8B-IT
+language:
+- en
+- zh
+- vi
+- id
+- th
+- fil
+- ta
+- ms
+- km
+- lo
+- my
+- jv
+- su
+license: llama3.1
+---
 
-A minimal LINE chatbot for Indonesian migrant workers in Taiwan with AI conversation and group translation features.
+<div>
+  <img src="llama_sea_lion_3.5_8b_r_banner.png"/>
+</div>
 
-## Features
+Current Version: `14.04.2025`
 
-### 🤖 AI-Powered Assistance
+# Llama-SEA-LION-v3.5-8B-R
 
-- **Conversational AI**: Powered by SEA-LION-7B, optimized for Southeast Asian languages
-- **Multi-language Support**: Indonesian, Traditional Chinese, English
-- **Context-aware Responses**: Maintains conversation history
+[SEA-LION](https://arxiv.org/abs/2504.05747) is a collection of Large Language Models (LLMs) which have been pretrained and instruct-tuned for the Southeast Asia (SEA) region.
 
-### 📍 Location Services
+SEA-LION stands for _Southeast Asian Languages In One Network_.
 
-- **Find Nearby Places**: Indonesian restaurants, hospitals, mosques
-- **Google Maps Integration**: Directions and distance calculations
-- **Location Sharing**: Send location to get relevant nearby recommendations
+- **Developed by:** Products Pillar, AI Singapore
+- **Funded by:** Singapore NRF
+- **Model type:** Decoder
+- **Languages supported:** Burmese, Chinese, English, Filipino, Indonesia, Javanese, Khmer, Lao, Malay, Sundanese, Tamil, Thai, Vietnamese
+- **License:** [Llama 3.1 Community License](https://huggingface.co/meta-llama/Llama-3.1-70B-Instruct/blob/main/LICENSE)
 
-### 🌐 Translation
+## Model Details
+### Model Description
 
-- **Group Chat Translation**: Automatic translation in group chats
-- **Multi-language**: Supports ID → ZH → EN translation
-- **Context-aware**: Uses LLM for natural translations
+Llama-SEA-LION-v3.5-8B-R is a hybrid model offering versatile functionality, handling both complex reasoning tasks and general text generation, with mode selection managed through the tokenizer's chat template.
 
-### 🚨 Emergency & Resources
+We performed instruction tuning in English and also in SEA languages such as Filipino, Indonesian, Tamil, Thai and Vietnamese on our [continued pre-trained Llama-SEA-LION-v3-8B](https://huggingface.co/aisingapore/Llama-SEA-LION-v3-8B), a decoder model using the Llama 3.1 architecture, to create Llama-SEA-LION-v3.5-8B-R.
 
-- **Emergency Contacts**: Quick access to police, ambulance, labor hotline
-- **Embassy Information**: Indonesian embassy contact details
-- **Healthcare Guidance**: Find nearby hospitals and medical facilities
+For tokenisation, the model employs the default tokenizer used in Llama 3.1 70B Instruct. The model has a context length of 128k.
 
-### 📱 Rich Menu Interface
+### Benchmark Performance
+We evaluated Llama-SEA-LION-v3.5-8B-R on both general language capabilities and instruction-following capabilities.
 
-- Healthcare
-- Labor Rights
-- Language Settings
-- Emergency Contacts
-- Language Settings
-- Clear Chat History
+#### General Language Capabilities
+For the evaluation of general language capabilities, we employed the [SEA-HELM evaluation benchmark](https://arxiv.org/abs/2502.14301) across a variety of tasks.
+These tasks include Question Answering (QA), Sentiment Analysis (Sentiment), Toxicity Detection (Toxicity), Translation in both directions (Eng>Lang & Lang>Eng), Abstractive Summarisation (Abssum), Causal Reasoning (Causal), Natural Language Inference (NLI), and linguistic diagnostics (LINDSEA).
 
-## Technology Stack
+Note: SEA-HELM is implemented using prompts to elicit answers in a strict format. For all tasks, the model is expected to provide an answer tag from which the answer is automatically extracted. For tasks where options are provided, the answer should comprise one of the pre-defined options. The scores for each task is normalised to account for baseline performance due to random chance.
 
-- **Backend**: FastAPI 0.116.1 (Python 3.11+)
-- **LLM**: SEA-LION-7B-Instruct via vLLM
-- **Database**: SQLAlchemy + aiosqlite (SQLite)
-- **LINE SDK**: line-bot-sdk 3.19.0
-- **Containerization**: Docker/Podman
+The evaluation was done **zero-shot** with native prompts on a sample of 100-1000 instances for each dataset.
 
-## Prerequisites
+#### Instruction-following Capabilities
+Since Llama-SEA-LION-v3.5-8B-R is an instruction-following model, we also evaluated it on instruction-following capabilities with two datasets, SEA-IFEval (based on [IFEval](https://arxiv.org/abs/2311.07911)) and SEA-MTBench (based on [MT-Bench](https://arxiv.org/abs/2306.05685)).
 
-### Required
+As these two datasets were originally in English, the linguists and native speakers in the team worked together to filter, localise and translate the datasets into the respective target languages to ensure that the examples remained reasonable, meaningful and natural.
 
-- Python 3.11+
-- LINE Messaging API credentials
-- NVIDIA GPU (RTX 4090 recommended) for local LLM
-- 24GB+ VRAM for SEA-LION-7B
+**SEA-IFEval**
 
-### Optional
+SEA-IFEval evaluates a model's ability to adhere to constraints provided in the prompt, for example beginning a response with a specific word/phrase or answering with a certain number of sections. Additionally, accuracy is normalised by the proportion of responses in the correct language (if the model performs the task correctly but responds in the wrong language, it is judged to have failed the task).
 
-- Google Maps API key (for location services)
-- Docker/Podman for containerized deployment
+**SEA-MTBench**
 
-## Quick Start
+SEA-MTBench evaluates a model's ability to engage in multi-turn (2 turns) conversations and respond in ways that align with human needs. We use `gpt-4-1106-preview` as the judge model and compare against `gpt-3.5-turbo-0125` as the baseline model. The metric used is the weighted win rate against the baseline model (i.e. average win rate across each category: Math, Reasoning, STEM, Humanities, Roleplay, Writing, Extraction). A tie is given a score of 0.5.
 
-### 1. Clone Repository
+For more details on Llama-SEA-LION-v3.5-8B-R benchmark performance, please refer to the SEA-HELM leaderboard, https://leaderboard.sea-lion.ai/.
 
-```bash
-git clone <repository-url>
-cd imigo-linebot
+### Usage
+Llama-SEA-LION-v3.5-8B-R can be run using the 🤗 Transformers library 
+```python
+import transformers
+import torch
+
+model_id = "aisingapore/Llama-SEA-LION-v3.5-8B-R"
+
+pipeline = transformers.pipeline(
+    "text-generation",
+    model=model_id,
+    model_kwargs={"torch_dtype": torch.bfloat16},
+    device_map="auto",
+)
+messages = [
+    {"role": "user", "content": "Apa sentimen dari kalimat berikut ini?\nKalimat: Buku ini sangat membosankan.\nJawaban: "},
+]
+
+outputs = pipeline(
+    messages,
+    max_new_tokens=256,
+)
+print(outputs[0]["generated_text"][-1])
 ```
 
-### 2. Environment Setup
-```bash
-cp .env.example .env
-# Edit .env with your credentials
-nano .env
+### Thinking Mode Toggle
+Llama-SEA-LION-v3.5-8B-R defaults to reasoning with `thinking_mode="on"` passed to the chat template. To use non-thinking mode ie. standard generations, pass `thinking_mode="off"` to the chat template instead.
+```python
+import transformers
+import torch
+
+model_id = "aisingapore/Llama-SEA-LION-v3.5-8B-R"
+
+pipeline = transformers.pipeline(
+    "text-generation",
+    model=model_id,
+    model_kwargs={"torch_dtype": torch.bfloat16},
+    device_map="auto",
+)
+
+tokenizer = pipeline.tokenizer
+
+messages = [
+    {"role": "user", "content": "Apa sentimen dari kalimat berikut ini?\nKalimat: Buku ini sangat membosankan.\nJawaban: "},
+]
+
+prompt = tokenizer.apply_chat_template(messages, add_generation_prompt=True, tokenize=False, thinking_mode="off")
+
+outputs = pipeline(
+    prompt,
+    max_new_tokens=256,
+)
+
+print(outputs[0]["generated_text"])
 ```
 
-Required environment variables:
-```env
-LINE_CHANNEL_SECRET=your_channel_secret
-LINE_CHANNEL_ACCESS_TOKEN=your_channel_access_token
-DEFAULT_LANGUAGE=id
-```
-
-### 3. Install Dependencies
-
-#### Using uv (recommended)
-```bash
-uv venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate  # Windows
-
-uv pip install -r pyproject.toml
-```
-
-#### Using pip
-```bash
-python3.11 -m venv venv
-source venv/bin/activate
-pip install fastapi uvicorn line-bot-sdk aiosqlite sqlalchemy openai pyyaml attrs python-dotenv
-```
-
-### 4. Run the Bot
-
-#### Development (Local)
-```bash
-# Terminal 1: Start vLLM server
-python -m vllm.entrypoints.openai.api_server \
-  --model aisingapore/sealion7b-instruct \
-  --dtype auto \
-  --port 8001
-
-# Terminal 2: Start FastAPI backend
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Terminal 3: Expose via ngrok (for LINE webhook)
-ngrok http 8000
-```
-
-#### Production (Docker)
-```bash
-docker-compose up -d
-```
-
-#### Production (Podman)
-```bash
-podman-compose up -d
-```
-
-### 5. Configure LINE Webhook
-
-1. Go to [LINE Developers Console](https://developers.line.biz/console/)
-2. Select your Messaging API channel
-3. Set Webhook URL to: `https://your-domain.com/webhook` or `https://xxx.ngrok.io/webhook`
-4. Enable webhook
-5. Disable auto-reply and greeting messages
-
-## Project Structure
-
-```text
-imigo-linebot/
-├── main.py                 # FastAPI application & webhook handler
-├── config.py               # Configuration management
-├── pyproject.toml          # Project dependencies
-├── Dockerfile              # Backend container
-├── Dockerfile.llm          # vLLM server container
-├── docker-compose.yaml     # Docker orchestration
-├── .env.example            # Environment template
-├── database/
-│   ├── models.py           # SQLAlchemy models
-│   └── database.py         # Database service
-├── services/
-│   ├── ai_service.py       # LLM conversation service
-│   └── translation_service.py  # Translation service
-└── config/
-    ├── indonesia.yaml      # Indonesian bot config
-    ├── chinese.yaml        # Chinese bot config
-    └── english.yaml        # English bot config
-```
-
-## API Endpoints
-
-- `GET /` - Bot status and configuration
-- `GET /health` - Health check
-- `POST /webhook` - LINE webhook endpoint
-
-## Database Schema
-
-### Conversations
-
-- `id`: Unique conversation ID
-- `user_id`: LINE user ID
-- `role`: "user" or "assistant"
-- `content`: Message content
-- `created_at`: Timestamp
-
-### User Preferences
-
-- `user_id`: LINE user ID (primary key)
-- `language`: Preferred language (id/zh/en/etc.)
-- `created_at`: Account creation time
-- `updated_at`: Last update time
-
-### Group Settings
-- `group_id`: LINE group ID (primary key)
-- `translate_enabled`: Translation enabled flag
-- `target_language`: Target language for translation
-- `enabled_by`: User who enabled translation
-- `created_at`, `updated_at`: Timestamps
-
-- `group_id`: LINE group ID (primary key)
-- `translate_enabled`: Translation enabled flag
-- `target_language`: Target language for translation
-- `enabled_by`: User who enabled translation
-- `created_at`: Setting creation time
-- `updated_at`: Last update time
-
-## Configuration
-
-### Language Files
-
-Each language has a YAML config file in `config/`:
-
-```yaml
-bot:
-  name: "Bot Name"
-  language: id
-  country: indonesia
-
-messages:
-  welcome: "Welcome message..."
-  help: "Help message..."
-  # ... more messages
-
-emergency:
-  police: "110"
-  ambulance: "119"
-  # ... more contacts
-
-quick_replies:
-  - label: "🏥 Health"
-    text: "I need health assistance"
-  # ... more quick replies
-```
-
-### Switching Languages
-
-Users can change their language preference:
-
-- Via rich menu → Language
-- Send: `/lang id` (Indonesian), `/lang zh` (Chinese), `/lang en` (English)
-
-## Google Maps Integration
-
-### Private Chat (1-on-1)
-User sends message → AI responds in their preferred language
-
-1. Places API (Nearby Search)
-2. Geocoding API
-3. Directions API
-
-### Setup
-
-1. Create Google Cloud Project
-2. Enable Maps Platform APIs
-3. Create API key
-4. Add restrictions:
-      - HTTP referrers (for security)
-      - API restrictions (only enable needed APIs)
-5. Add to `.env`: `Maps_API_KEY=your_key`
-
-### Free Tier
-
-- $200 free credit per month
-- Places API: $17 per 1000 requests
-- Geocoding/Directions: $5 per 1000 requests
-- Sufficient for MVP scale
-
-## LLM Configuration
-
-### SEA-LION-7B (Recommended)
-
-- **Model**: aisingapore/sealion7b-instruct
-- **VRAM**: \~7-14GB (depending on quantization)
-- **Languages**: Indonesian, Chinese, English, Vietnamese, Thai, Malay, Tagalog
-- **License**: Apache 2.0
-
-### Alternative: OpenAI API
-
-### OpenAI API (Alternative for Development)
-```env
-LLM_API_KEY=sk-your-openai-key
-# Leave LLM_BASE_URL empty to use OpenAI
-```
-
-## Deployment
-
-### Local GPU Server
-
-1. Install NVIDIA drivers (525+)
-2. Install CUDA 12.1+
-3. Run docker-compose or podman-compose
-4. Expose via Cloudflare Tunnel or ngrok
-
-### Cloud Options
-
-- AWS EC2 (g5.xlarge): $1.006/hour
-- Google Cloud (n1-standard-4 + T4): \~$0.50/hour
-- Vast.ai: $0.20-0.50/hour
-
-### Tunneling Services
-
-#### Ngrok (Development)
-
-```bash
-ngrok http 8000
-# Use the HTTPS URL for LINE webhook
-```
-
-#### Cloudflare Tunnel (Production)
-
-```bash
-cloudflared tunnel create migrant-bot
-cloudflared tunnel run migrant-bot
-```
-
-## Monitoring
-
-### Logs
-
-```bash
-# Docker
-docker-compose logs -f backend
-docker-compose logs -f llm
-
-# Podman
-podman-compose logs -f backend
-```
-
-### GPU Monitoring
-
-```bash
-watch -n 1 nvidia-smi
-```
-
-### Metrics to Track
-
-- Message volume per hour
-- LLM response time (P50, P95, P99)
-- Google Maps API usage
-- Error rates
-- User language distribution
-
-## Development
-
-### Running Tests
-```bash
-uv pip install -r pyproject.toml --extra dev
-pytest
-```
-
-### Code Formatting
-```bash
-black .
-ruff check .
-```
-
-## Troubleshooting
-
-### vLLM Server Issues
-
-- **Out of memory**: Reduce `--max-model-len` or use quantization
-- **Slow loading**: Model downloads on first run (15-30 minutes)
-- **GPU not detected**: Check `nvidia-smi` and CUDA installation
-
-### LINE Webhook Issues
-
-- **Invalid signature**: Check `LINE_CHANNEL_SECRET` is correct
-- **403 Forbidden**: Ensure webhook URL is HTTPS
-- **No response**: Check FastAPI logs and server connectivity
-
-### Google Maps Issues
-
-- **API key error**: Enable required APIs in Google Cloud Console
-- **Quota exceeded**: Check usage in Google Cloud Console
-- **No results**: Verify coordinates and search parameters
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make changes and test
-4. Submit pull request
-
-## License
-
-MIT License
-
-## Support
-
-For issues and questions:
-
-- GitHub Issues: [repository-url]/issues
-
-## Acknowledgments
-
-- AI Singapore for SEA-LION-7B model
-- LINE Corporation for Messaging API
-- Google for Maps Platform APIs
-- FastAPI and vLLM communities
+### Caveats
+It is important for users to be aware that our model exhibits certain limitations that warrant consideration. Like many LLMs, the model can hallucinate and occasionally generates irrelevant content, introducing fictional elements that are not grounded in the provided context. Users should also exercise caution in interpreting and validating the model's responses due to the potential inconsistencies in its reasoning.
+
+## Limitations
+### Safety
+Current SEA-LION models, including this commercially permissive release, have not been aligned for safety. Developers and users should perform their own safety fine-tuning and related security measures. In no event shall the authors be held liable for any claim, damages, or other liability arising from the use of the released weights and codes.
+
+## Call for Contributions
+We encourage researchers, developers, and language enthusiasts to actively contribute to the enhancement and expansion of SEA-LION. Contributions can involve identifying and reporting bugs, sharing pre-training, instruction, and preference data, improving documentation usability, proposing and implementing new model evaluation tasks and metrics, or training versions of the model in additional Southeast Asian languages. Join us in shaping the future of SEA-LION by sharing your expertise and insights to make these models more accessible, accurate, and versatile. Please check out our GitHub for further information on the call for contributions.
+
+## The Team
+Antonyrex Sajeban, Chan Adwin, Cheng Nicholas, Choa Esther, Huang Yuli, Hulagadri Adithya Venkatadri, Lau Wayne, Lee Chwan Ren, Leong Wai Yi, Leong Wei Qi, Liew Rachel, Limkonchotiwat Peerat, Liu Bing Jie Darius, Montalan Jann Railey, Ng Boon Cheong Raymond, Ngui Jian Gang, Nguyen Thanh Ngan, Ong Brandon, Ong Tat-Wee David, Ong Zhi Hao, Rengarajan Hamsawardhini, Siow Bryan, Susanto Yosephine, Tai Ngee Chia, Tan Choon Meng, Teng Walter, Teo Eng Sipp Leslie, Teo Wei Yi, Tjhi William, Yeo Yeow Tong, Yong Xianbin
+## Acknowledgements
+[AI Singapore](​​https://aisingapore.org/) is a national programme supported by the National Research Foundation, Singapore and hosted by the National University of Singapore. Any opinions, findings and conclusions or recommendations expressed in this material are those of the author(s) and do not reflect the views of the National Research Foundation or the National University of Singapore. 
+
+## Contact
+For more info, please contact us using this [SEA-LION Inquiry Form](https://forms.gle/sLCUVb95wmGf43hi6)
+
+[Link to SEA-LION's GitHub repository](https://github.com/aisingapore/sealion)
+
+## Disclaimer
+This is the repository for the commercial instruction-tuned model.
+The model has _not_ been aligned for safety.
+Developers and users should perform their own safety fine-tuning and related security measures.
+In no event shall the authors be held liable for any claims, damages, or other liabilities arising from the use of the released weights and codes.

@@ -1,18 +1,31 @@
 import os
 import logging
+import re
 from openai import AsyncOpenAI
+from sqlalchemy.orm.util import _cleanup_mapped_str_annotation
 from database.database import DatabaseService
 from config import BotConfig
 
 logger = logging.getLogger(__name__)
 
+def strip_markdown_formatting(text: str) -> str:
+    # Remove bold (**text** and __text__)
+    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+    text = re.sub(r"__(.*?)__", r"\1", text)
+
+    # Remove italics (*text* and _text_) – keep content
+    text = re.sub(r"(?<!\*)\*(?!\*)(.*?) (?<!\*)\*(?!\*)", r"\1", text)  # safer if space-based, but simple version below is ok for most:
+    text = re.sub(r"(?<!\*)\*(.*?)\*(?!\*)", r"\1", text)
+    text = re.sub(r"(?<!_)_(.*?)_(?!_)", r"\1", text)
+
+    return text
 
 class AIService:
     def __init__(self, db_service: DatabaseService, config: BotConfig):
         self.db_service = db_service
         self.config = config
         self.client = self._init_client()
-        self.model_name = os.getenv("MODEL_NAME", "Qwen/Qwen2.5-9B-Instruct")
+        self.model_name = os.getenv("MODEL_NAME", "aisingapore/Llama-SEA-LION-v3.5-8B-R")
 
         self.languages = {
             "en": "English",
@@ -49,6 +62,7 @@ LANGUAGE
 
 FORMAT
 - Plain text only. Use hyphens (-) for lists.
+- Do not use any formatting like bold or italics.
 - Phone numbers and addresses on separate lines.
 
 SAFETY
@@ -63,11 +77,21 @@ EMERGENCY NUMBERS
 STYLE
 - Be practical and supportive.
 - Give 2-4 clear next steps.
-- Use ALL CAPS for emphasis, not bold/italic."""
+- Use ALL CAPS for emphasis, not bold/italic.
+
+IMPORTANT:
+- OUTPUT MUST BE PLAIN TEXT ONLY.
+- DO NOT USE **bold**, __bold__, *italic*, _italic_ or any other markdown besides lists.
+- If you accidentally use markdown, immediately restate your answer in plain text only.
+"""
+
+    async def aclose(self) -> None:
+        # Close underlying HTTP client for AsyncOpenAI
+        await self.client.close()
 
     async def generate_response(self, user_id: str, message: str) -> str:
         user_language = await self.db_service.get_user_language(user_id)
-        history = await self.db_service.get_conversation_history(user_id, limit=10)
+        history = await self.db_service.get_conversation_history(user_id=user_id, limit=10)
 
         messages = [{"role": "system", "content": self._get_system_prompt()}]
 
@@ -87,12 +111,14 @@ STYLE
         )
 
         ai_response = response.choices[0].message.content.strip()
+        cleaned_ai_response = re.sub(r"^[\s\S]*?<\/think>\s*", '', ai_response)
+        cleaned_ai_response = strip_markdown_formatting(cleaned_ai_response)
 
         await self.db_service.save_message(user_id, "user", message)
-        await self.db_service.save_message(user_id, "assistant", ai_response)
+        await self.db_service.save_message(user_id, "assistant", cleaned_ai_response)
 
         logger.info(f"Response for user {user_id[:8]}... in {user_language}")
-        return ai_response
+        return cleaned_ai_response
 
     async def clear_conversation(self, user_id: str):
         await self.db_service.clear_user_conversation(user_id)
