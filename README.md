@@ -4,17 +4,35 @@ A minimal LINE chatbot for Indonesian migrant workers in Taiwan with AI conversa
 
 ## Features
 
-### 🤖 AI-Powered Chat (Private Messages)
+### 🤖 AI-Powered Assistance
+
 - **Conversational AI**: Powered by SEA-LION-7B, optimized for Southeast Asian languages
 - **Multi-language Support**: Indonesian, Traditional Chinese, English
 - **Context-aware Responses**: Maintains conversation history
 
-### 🌐 Translation (Group Chats)
-- **Automatic Translation**: Translate messages in LINE group chats
-- **Multi-language**: Supports ID ↔️ ZH ↔️ EN translation
-- **LLM-based**: Natural, context-aware translations
+### 📍 Location Services
+
+- **Find Nearby Places**: Indonesian restaurants, hospitals, mosques
+- **Google Maps Integration**: Directions and distance calculations
+- **Location Sharing**: Send location to get relevant nearby recommendations
+
+### 🌐 Translation
+
+- **Group Chat Translation**: Automatic translation in group chats
+- **Multi-language**: Supports ID → ZH → EN translation
+- **Context-aware**: Uses LLM for natural translations
+
+### 🚨 Emergency & Resources
+
+- **Emergency Contacts**: Quick access to police, ambulance, labor hotline
+- **Embassy Information**: Indonesian embassy contact details
+- **Healthcare Guidance**: Find nearby hospitals and medical facilities
 
 ### 📱 Rich Menu Interface
+
+- Healthcare
+- Labor Rights
+- Language Settings
 - Emergency Contacts
 - Language Settings
 - Clear Chat History
@@ -30,13 +48,21 @@ A minimal LINE chatbot for Indonesian migrant workers in Taiwan with AI conversa
 ## Prerequisites
 
 ### Required
+
 - Python 3.11+
 - LINE Messaging API credentials
-- NVIDIA GPU (RTX 4090 recommended) for local LLM (or use OpenAI API)
+- NVIDIA GPU (RTX 4090 recommended) for local LLM
+- 24GB+ VRAM for SEA-LION-7B
+
+### Optional
+
+- Google Maps API key (for location services)
+- Docker/Podman for containerized deployment
 
 ## Quick Start
 
 ### 1. Clone Repository
+
 ```bash
 git clone <repository-url>
 cd imigo-linebot
@@ -111,7 +137,7 @@ podman-compose up -d
 
 ## Project Structure
 
-```
+```text
 imigo-linebot/
 ├── main.py                 # FastAPI application & webhook handler
 ├── config.py               # Configuration management
@@ -141,6 +167,7 @@ imigo-linebot/
 ## Database Schema
 
 ### Conversations
+
 - `id`: Unique conversation ID
 - `user_id`: LINE user ID
 - `role`: "user" or "assistant"
@@ -148,9 +175,11 @@ imigo-linebot/
 - `created_at`: Timestamp
 
 ### User Preferences
+
 - `user_id`: LINE user ID (primary key)
-- `language`: Preferred language (id/zh/en)
-- `created_at`, `updated_at`: Timestamps
+- `language`: Preferred language (id/zh/en/etc.)
+- `created_at`: Account creation time
+- `updated_at`: Last update time
 
 ### Group Settings
 - `group_id`: LINE group ID (primary key)
@@ -159,27 +188,84 @@ imigo-linebot/
 - `enabled_by`: User who enabled translation
 - `created_at`, `updated_at`: Timestamps
 
-## Usage
+- `group_id`: LINE group ID (primary key)
+- `translate_enabled`: Translation enabled flag
+- `target_language`: Target language for translation
+- `enabled_by`: User who enabled translation
+- `created_at`: Setting creation time
+- `updated_at`: Last update time
+
+## Configuration
+
+### Language Files
+
+Each language has a YAML config file in `config/`:
+
+```yaml
+bot:
+  name: "Bot Name"
+  language: id
+  country: indonesia
+
+messages:
+  welcome: "Welcome message..."
+  help: "Help message..."
+  # ... more messages
+
+emergency:
+  police: "110"
+  ambulance: "119"
+  # ... more contacts
+
+quick_replies:
+  - label: "🏥 Health"
+    text: "I need health assistance"
+  # ... more quick replies
+```
+
+### Switching Languages
+
+Users can change their language preference:
+
+- Via rich menu → Language
+- Send: `/lang id` (Indonesian), `/lang zh` (Chinese), `/lang en` (English)
+
+## Google Maps Integration
 
 ### Private Chat (1-on-1)
 User sends message → AI responds in their preferred language
 
-### Group Chat (Translation)
-1. Admin enables translation in group settings
-2. User sends message in any language → Bot translates to target language
+1. Places API (Nearby Search)
+2. Geocoding API
+3. Directions API
 
-### Commands
-- `/lang id` - Switch to Indonesian
-- `/lang zh` - Switch to Traditional Chinese
-- `/lang en` - Switch to English
+### Setup
+
+1. Create Google Cloud Project
+2. Enable Maps Platform APIs
+3. Create API key
+4. Add restrictions:
+      - HTTP referrers (for security)
+      - API restrictions (only enable needed APIs)
+5. Add to `.env`: `Maps_API_KEY=your_key`
+
+### Free Tier
+
+- $200 free credit per month
+- Places API: $17 per 1000 requests
+- Geocoding/Directions: $5 per 1000 requests
+- Sufficient for MVP scale
 
 ## LLM Configuration
 
-### SEA-LION-7B (Recommended for Production)
+### SEA-LION-7B (Recommended)
+
 - **Model**: aisingapore/sealion7b-instruct
-- **VRAM**: ~7-14GB (depending on quantization)
+- **VRAM**: \~7-14GB (depending on quantization)
 - **Languages**: Indonesian, Chinese, English, Vietnamese, Thai, Malay, Tagalog
 - **License**: Apache 2.0
+
+### Alternative: OpenAI API
 
 ### OpenAI API (Alternative for Development)
 ```env
@@ -190,14 +276,60 @@ LLM_API_KEY=sk-your-openai-key
 ## Deployment
 
 ### Local GPU Server
-1. Install NVIDIA drivers (525+) and CUDA 12.1+
-2. Run: `docker-compose up -d`
-3. Expose via Cloudflare Tunnel or ngrok
+
+1. Install NVIDIA drivers (525+)
+2. Install CUDA 12.1+
+3. Run docker-compose or podman-compose
+4. Expose via Cloudflare Tunnel or ngrok
 
 ### Cloud Options
+
 - AWS EC2 (g5.xlarge): $1.006/hour
-- Google Cloud (n1-standard-4 + T4): ~$0.50/hour
+- Google Cloud (n1-standard-4 + T4): \~$0.50/hour
 - Vast.ai: $0.20-0.50/hour
+
+### Tunneling Services
+
+#### Ngrok (Development)
+
+```bash
+ngrok http 8000
+# Use the HTTPS URL for LINE webhook
+```
+
+#### Cloudflare Tunnel (Production)
+
+```bash
+cloudflared tunnel create migrant-bot
+cloudflared tunnel run migrant-bot
+```
+
+## Monitoring
+
+### Logs
+
+```bash
+# Docker
+docker-compose logs -f backend
+docker-compose logs -f llm
+
+# Podman
+podman-compose logs -f backend
+```
+
+### GPU Monitoring
+
+```bash
+watch -n 1 nvidia-smi
+```
+
+### Metrics to Track
+
+- Message volume per hour
+- LLM response time (P50, P95, P99)
+- Google Maps API usage
+- Error rates
+- User language distribution
 
 ## Development
 
@@ -216,21 +348,43 @@ ruff check .
 ## Troubleshooting
 
 ### vLLM Server Issues
+
 - **Out of memory**: Reduce `--max-model-len` or use quantization
 - **Slow loading**: Model downloads on first run (15-30 minutes)
 - **GPU not detected**: Check `nvidia-smi` and CUDA installation
 
 ### LINE Webhook Issues
+
 - **Invalid signature**: Check `LINE_CHANNEL_SECRET` is correct
 - **403 Forbidden**: Ensure webhook URL is HTTPS
 - **No response**: Check FastAPI logs and server connectivity
+
+### Google Maps Issues
+
+- **API key error**: Enable required APIs in Google Cloud Console
+- **Quota exceeded**: Check usage in Google Cloud Console
+- **No results**: Verify coordinates and search parameters
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make changes and test
+4. Submit pull request
 
 ## License
 
 MIT License
 
+## Support
+
+For issues and questions:
+
+- GitHub Issues: [repository-url]/issues
+
 ## Acknowledgments
 
 - AI Singapore for SEA-LION-7B model
 - LINE Corporation for Messaging API
+- Google for Maps Platform APIs
 - FastAPI and vLLM communities
