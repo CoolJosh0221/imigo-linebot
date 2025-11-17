@@ -2,6 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from linebot.v3.webhook import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
@@ -35,7 +36,13 @@ line_async_client: AsyncApiClient
 line_messaging_api: AsyncMessagingApi
 line_parser: WebhookParser
 
-app = FastAPI()
+app = FastAPI(
+    title="IMIGO - Indonesian Migrant Worker Assistant",
+    description="AI-powered LINE bot and API for Indonesian migrant workers in Taiwan",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+)
 
 
 @asynccontextmanager
@@ -75,6 +82,22 @@ async def lifespan(app: FastAPI):
 
 
 app.router.lifespan_context = lifespan
+
+# Configure CORS for public API access
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Include API routers
+from api.routes import chat, translation, system
+
+app.include_router(chat.router)
+app.include_router(translation.router)
+app.include_router(system.router)
 
 
 def get_line_api():
