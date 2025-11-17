@@ -220,3 +220,7 @@ models/
 
 # SSL Certificates
 letsencrypt/
+
+# DDNS Configuration (keep examples, ignore actual config)
+ddns/config.json
+ddns/*.db

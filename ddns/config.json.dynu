@@ -1,0 +1,11 @@
+{
+  "settings": [
+    {
+      "provider": "dynu",
+      "host": "api.imigo.tw",
+      "username": "YOUR_DYNU_USERNAME",
+      "password": "YOUR_DYNU_PASSWORD",
+      "ip_version": "ipv4"
+    }
+  ]
+}

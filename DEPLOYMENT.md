@@ -13,10 +13,30 @@ This guide explains how to deploy the IMIGO API to your domain `imigo.tw` with a
 
 Before deploying, ensure your DNS records are configured:
 
+### Static IP Address
+
+If you have a static/fixed IP address:
+
 ```
 A Record:     api.imigo.tw     -> YOUR_SERVER_IP
 A Record:     traefik.imigo.tw -> YOUR_SERVER_IP (optional, for Traefik dashboard)
 ```
+
+### Dynamic IP Address
+
+If your IP address changes periodically, you need Dynamic DNS (DDNS).
+
+**See the complete DDNS setup guide: [DDNS_SETUP.md](DDNS_SETUP.md)**
+
+Quick setup options:
+- **Cloudflare** - Best if domain is on Cloudflare
+- **DuckDNS** - Simplest, completely free
+- **No-IP** - Popular free DDNS service
+- **Dynu** - Free with more features
+
+The docker-compose includes a DDNS updater service that automatically updates your DNS when your IP changes.
+
+---
 
 Note: `www.imigo.tw` is reserved for your landing page and should be configured separately.
 
@@ -170,6 +190,32 @@ https://traefik.imigo.tw:8080/dashboard/
 ```
 
 **Security Note**: In production, enable basic authentication for the dashboard by uncommenting and configuring the auth middleware in `docker-compose.yaml`.
+
+## DDNS Status Monitor (If Using Dynamic DNS)
+
+If you configured DDNS, you can monitor your IP updates:
+
+```
+http://localhost:8888
+```
+
+Or from a remote browser:
+
+```
+http://YOUR_SERVER_IP:8888
+```
+
+The web interface shows:
+- Current public IP address
+- Last update time
+- Update history
+- Configuration status
+
+Check DDNS logs:
+
+```bash
+docker-compose logs -f ddns-updater
+```
 
 ## Troubleshooting
 

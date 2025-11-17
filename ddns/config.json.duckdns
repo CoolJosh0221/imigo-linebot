@@ -1,0 +1,10 @@
+{
+  "settings": [
+    {
+      "provider": "duckdns",
+      "domain": "yourdomain",
+      "token": "YOUR_DUCKDNS_TOKEN",
+      "ip_version": "ipv4"
+    }
+  ]
+}

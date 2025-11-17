@@ -76,7 +76,7 @@ services:
       - "--model"
       - "/models/sealion-model"
       - "--dtype"
-      - "bfloat16" 
+      - "bfloat16"
       - "--gpu-memory-utilization"
       - "0.85"
       - "--max-model-len"
@@ -94,6 +94,31 @@ services:
               capabilities: [gpu]
     tty: true
     ipc: host
+    restart: unless-stopped
+    networks:
+      - bot-network
+
+  # Dynamic DNS Updater (for dynamic IP addresses)
+  ddns-updater:
+    image: qmcgaw/ddns-updater:latest
+    container_name: ddns-updater
+    volumes:
+      - ./ddns:/updater/data
+    environment:
+      - PERIOD=5m
+      - UPDATE_COOLDOWN_PERIOD=5m
+      - PUBLICIP_FETCHERS=all
+      - PUBLICIP_HTTP_PROVIDERS=all
+      - PUBLICIPV4_HTTP_PROVIDERS=all
+      - PUBLICIPV6_HTTP_PROVIDERS=all
+      - HTTP_TIMEOUT=10s
+      # Web UI
+      - LISTENING_PORT=8000
+      - ROOT_URL=/
+      # Health check
+      - HEALTH_SERVER_ADDRESS=127.0.0.1:9999
+    ports:
+      - "8888:8000"  # Web UI for DDNS status
     restart: unless-stopped
     networks:
       - bot-network

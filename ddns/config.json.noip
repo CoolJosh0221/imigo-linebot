@@ -1,0 +1,11 @@
+{
+  "settings": [
+    {
+      "provider": "noip",
+      "host": "api.imigo.tw",
+      "username": "YOUR_NOIP_USERNAME",
+      "password": "YOUR_NOIP_PASSWORD",
+      "ip_version": "ipv4"
+    }
+  ]
+}
