@@ -2,7 +2,6 @@ import os
 import logging
 import re
 from openai import AsyncOpenAI
-from sqlalchemy.orm.util import _cleanup_mapped_str_annotation
 from database.database import DatabaseService
 from config import BotConfig
 
