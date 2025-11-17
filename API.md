@@ -1,6 +1,6 @@
 # IMIGO API Documentation
 
-Base URL: `https://imigo.tw`
+Base URL: `https://api.imigo.tw`
 
 ## Authentication
 
@@ -72,7 +72,7 @@ Send a message to the AI bot and receive a response.
 
 **Example:**
 ```bash
-curl -X POST https://imigo.tw/api/chat/message \
+curl -X POST https://api.imigo.tw/api/chat/message \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user123",
@@ -101,7 +101,7 @@ Clear conversation history for a specific user.
 
 **Example:**
 ```bash
-curl -X POST https://imigo.tw/api/chat/clear \
+curl -X POST https://api.imigo.tw/api/chat/clear \
   -H "Content-Type: application/json" \
   -d '{"user_id": "user123"}'
 ```
@@ -135,7 +135,7 @@ Get conversation history for a user.
 
 **Example:**
 ```bash
-curl https://imigo.tw/api/chat/history/user123?limit=20
+curl https://api.imigo.tw/api/chat/history/user123?limit=20
 ```
 
 ---
@@ -171,7 +171,7 @@ Translate text between supported languages.
 
 **Example:**
 ```bash
-curl -X POST https://imigo.tw/api/translate/ \
+curl -X POST https://api.imigo.tw/api/translate/ \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Hello, how can I help you?",
@@ -209,7 +209,7 @@ Get list of supported languages.
 
 **Example:**
 ```bash
-curl https://imigo.tw/api/translate/languages
+curl https://api.imigo.tw/api/translate/languages
 ```
 
 ---
@@ -273,8 +273,8 @@ This endpoint is used internally by LINE platform and should not be called direc
 
 Visit these URLs for interactive API documentation:
 
-- **Swagger UI**: https://imigo.tw/api/docs
-- **ReDoc**: https://imigo.tw/api/redoc
+- **Swagger UI**: https://api.imigo.tw/api/docs
+- **ReDoc**: https://api.imigo.tw/api/redoc
 
 ---
 
@@ -321,7 +321,7 @@ All endpoints may return the following error responses:
 ```javascript
 // Example: Send a chat message
 async function sendMessage(userId, message, language = 'id') {
-  const response = await fetch('https://imigo.tw/api/chat/message', {
+  const response = await fetch('https://api.imigo.tw/api/chat/message', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -348,7 +348,7 @@ import requests
 
 def send_message(user_id: str, message: str, language: str = "id"):
     response = requests.post(
-        "https://imigo.tw/api/chat/message",
+        "https://api.imigo.tw/api/chat/message",
         json={
             "user_id": user_id,
             "message": message,
@@ -366,7 +366,7 @@ print(result["response"])
 
 ```bash
 # Send a message
-curl -X POST https://imigo.tw/api/chat/message \
+curl -X POST https://api.imigo.tw/api/chat/message \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user123",
@@ -375,7 +375,7 @@ curl -X POST https://imigo.tw/api/chat/message \
   }'
 
 # Translate text
-curl -X POST https://imigo.tw/api/translate/ \
+curl -X POST https://api.imigo.tw/api/translate/ \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Good morning",
@@ -388,6 +388,6 @@ curl -X POST https://imigo.tw/api/translate/ \
 ## Support
 
 For issues or questions:
-- Check the interactive documentation at https://imigo.tw/api/docs
+- Check the interactive documentation at https://api.imigo.tw/api/docs
 - Review the deployment guide in DEPLOYMENT.md
 - Check service logs: `docker-compose logs -f backend`

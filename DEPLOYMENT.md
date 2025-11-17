@@ -14,11 +14,11 @@ This guide explains how to deploy the IMIGO API to your domain `imigo.tw` with a
 Before deploying, ensure your DNS records are configured:
 
 ```
-A Record:     imigo.tw       -> YOUR_SERVER_IP
-A Record:     www.imigo.tw   -> YOUR_SERVER_IP
-A Record:     api.imigo.tw   -> YOUR_SERVER_IP
+A Record:     api.imigo.tw     -> YOUR_SERVER_IP
 A Record:     traefik.imigo.tw -> YOUR_SERVER_IP (optional, for Traefik dashboard)
 ```
+
+Note: `www.imigo.tw` is reserved for your landing page and should be configured separately.
 
 ## Step 1: Configure SSL Email
 
@@ -100,7 +100,6 @@ docker-compose logs -f vllm
 Wait 1-2 minutes for Let's Encrypt to issue certificates, then visit:
 
 ```
-https://imigo.tw/
 https://api.imigo.tw/
 ```
 
@@ -112,10 +111,10 @@ Once deployed, your API will be available at:
 
 ### Main Endpoints
 
-- **Root**: `https://imigo.tw/`
-- **Health Check**: `https://imigo.tw/health`
-- **API Documentation**: `https://imigo.tw/api/docs`
-- **ReDoc**: `https://imigo.tw/api/redoc`
+- **Root**: `https://api.imigo.tw/`
+- **Health Check**: `https://api.imigo.tw/health`
+- **API Documentation**: `https://api.imigo.tw/api/docs`
+- **ReDoc**: `https://api.imigo.tw/api/redoc`
 
 ### API Routes
 
@@ -141,7 +140,7 @@ Once deployed, your API will be available at:
 ### Chat with the Bot
 
 ```bash
-curl -X POST https://imigo.tw/api/chat/message \
+curl -X POST https://api.imigo.tw/api/chat/message \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user123",
@@ -153,7 +152,7 @@ curl -X POST https://imigo.tw/api/chat/message \
 ### Translate Text
 
 ```bash
-curl -X POST https://imigo.tw/api/translate/ \
+curl -X POST https://api.imigo.tw/api/translate/ \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Hello, how are you?",

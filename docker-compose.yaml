@@ -50,8 +50,8 @@ services:
       - ./config:/app/config:ro
     labels:
       - "traefik.enable=true"
-      # Main API routes
-      - "traefik.http.routers.backend.rule=Host(`imigo.tw`) || Host(`www.imigo.tw`) || Host(`api.imigo.tw`)"
+      # API routes - only api.imigo.tw
+      - "traefik.http.routers.backend.rule=Host(`api.imigo.tw`)"
       - "traefik.http.routers.backend.entrypoints=websecure"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
       - "traefik.http.services.backend.loadbalancer.server.port=8000"
