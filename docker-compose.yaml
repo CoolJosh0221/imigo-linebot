@@ -9,8 +9,14 @@ services:
       - "http"
       - "--url"
       - "http://backend:8000"
+      - "--hostname"
+      - "${DOMAIN:-}"
+    ports:
+      - "80:80"
+      - "443:443"
     environment:
       - PANGOLIN_TOKEN=${PANGOLIN_TOKEN:-}
+      - DOMAIN=${DOMAIN:-}
     depends_on:
       - backend
     restart: unless-stopped

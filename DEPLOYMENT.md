@@ -6,24 +6,46 @@ This guide explains how to deploy the IMIGO API using Pangolin Self-Host Communi
 
 - Docker and Docker Compose installed
 - NVIDIA GPU with drivers installed (for vLLM)
+- A domain name (e.g., imigo.tw) pointing to your server (for custom domain)
+- Ports 80 and 443 open on your firewall
 - (Optional) Pangolin account for enhanced features
 
 ## What is Pangolin Self-Host Community Edition?
 
 Pangolin Self-Host Community Edition is a free, open-source tunnel service that provides:
-- **Automatic HTTPS** - No need to manage SSL certificates
+- **Automatic HTTPS** - No need to manage SSL certificates manually
 - **Public URLs** - Expose your local services to the internet
-- **No Port Forwarding** - Works behind firewalls and NAT
-- **Easy Setup** - No DNS configuration required
+- **Custom Domains** - Use your own domain (e.g., imigo.tw)
+- **No Port Forwarding** - Works behind NAT (with custom domain setup)
+- **Easy Setup** - Minimal DNS configuration required
 - **Self-Hosted** - Run on your own infrastructure
 - **Free Forever** - Community edition is completely free
 
-## Step 1: Configure Pangolin Token (Optional)
+## Step 1: DNS Configuration (For Custom Domain)
+
+If you want to use your custom domain `imigo.tw`, configure DNS records:
+
+```
+A Record:     imigo.tw           -> YOUR_SERVER_PUBLIC_IP
+A Record:     www.imigo.tw       -> YOUR_SERVER_PUBLIC_IP
+A Record:     api.imigo.tw       -> YOUR_SERVER_PUBLIC_IP
+```
+
+**Note:** DNS propagation can take up to 48 hours, but typically completes within a few minutes.
+
+To verify DNS is configured correctly:
+```bash
+dig imigo.tw
+# Should return your server's public IP
+```
+
+## Step 2: Configure Pangolin Token (Optional)
 
 Pangolin can run without a token for basic tunneling, or you can use a token for additional features:
 
 **Without Token (Basic Mode):**
-- Free random subdomain
+- Free random subdomain (if DOMAIN not set)
+- Or use your custom domain (if DOMAIN is set and DNS configured)
 - Automatic HTTPS
 - No registration required
 - Perfect for development and testing
@@ -32,9 +54,9 @@ Pangolin can run without a token for basic tunneling, or you can use a token for
 1. Sign up at https://pangolin.com/ (optional)
 2. Create a new tunnel token from your dashboard
 3. Copy the token to use in `.env` file
-4. Benefits: Custom subdomains, analytics, persistent URLs
+4. Benefits: Analytics, persistent URLs, advanced features
 
-## Step 2: Set Environment Variables
+## Step 3: Set Environment Variables
 
 Copy `.env.example` to `.env`:
 
@@ -48,6 +70,10 @@ Edit `.env` and fill in your credentials:
 # Pangolin Tunnel Token (OPTIONAL - leave empty for basic mode)
 PANGOLIN_TOKEN=
 
+# Domain Configuration
+# Set your custom domain or leave empty for random subdomain
+DOMAIN=imigo.tw
+
 # LINE Bot Credentials
 LINE_CHANNEL_SECRET=your_actual_channel_secret
 LINE_CHANNEL_ACCESS_TOKEN=your_actual_access_token
@@ -56,9 +82,12 @@ LINE_CHANNEL_ACCESS_TOKEN=your_actual_access_token
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
-**Note:** You can leave `PANGOLIN_TOKEN` empty to use Pangolin in basic mode (no account required).
+**Important Notes:**
+- Set `DOMAIN=imigo.tw` to use your custom domain (requires DNS configured)
+- Leave `DOMAIN=` empty for a random pangolin subdomain
+- `PANGOLIN_TOKEN` is optional - leave empty for basic mode (no account required)
 
-## Step 3: Build and Deploy
+## Step 4: Build and Deploy
 
 Start the services with Docker Compose:
 
@@ -71,9 +100,20 @@ This will start:
 - **Backend** - FastAPI application
 - **vLLM** - AI model server
 
-## Step 4: Get Your Public URL
+## Step 5: Get Your Public URL
 
-After starting the services, check the Pangolin logs to find your public URL:
+### If Using Custom Domain (DOMAIN=imigo.tw):
+
+Your API will be accessible at:
+```
+https://imigo.tw/
+```
+
+Pangolin will automatically obtain and manage SSL certificates for your domain.
+
+### If Using Random Subdomain (DOMAIN empty):
+
+Check the Pangolin logs to find your public URL:
 
 ```bash
 docker-compose logs pangolin
@@ -86,17 +126,23 @@ Tunnel established at: https://random-name-1234.pangolin.dev
 
 This is your public HTTPS URL! The backend will be accessible at this URL.
 
-## Step 5: Configure LINE Webhook
+## Step 6: Configure LINE Webhook
 
 Update your LINE Bot webhook URL in the LINE Developers Console:
 
+**If using custom domain:**
+```
+https://imigo.tw/webhook
+```
+
+**If using random subdomain:**
 ```
 https://your-pangolin-url.pangolin.dev/webhook
 ```
 
 Replace `your-pangolin-url.pangolin.dev` with the URL from the Pangolin logs.
 
-## Step 6: Verify Deployment
+## Step 7: Verify Deployment
 
 ### Check Container Status
 
@@ -121,8 +167,14 @@ docker-compose logs -f vllm
 
 ### Test Your API
 
-Visit your Pangolin URL in a browser or use curl:
+Visit your URL in a browser or use curl:
 
+**With custom domain:**
+```bash
+curl https://imigo.tw/health
+```
+
+**With random subdomain:**
 ```bash
 curl https://your-pangolin-url.pangolin.dev/health
 ```
@@ -131,14 +183,16 @@ You should see a valid SSL certificate automatically!
 
 ## API Endpoints
 
-Once deployed, your API will be available at your Pangolin URL:
+Once deployed, your API will be available at your configured URL.
 
-### Main Endpoints
+### Main Endpoints (using imigo.tw as example)
 
-- **Root**: `https://your-pangolin-url.pangolin.dev/`
-- **Health Check**: `https://your-pangolin-url.pangolin.dev/health`
-- **API Documentation**: `https://your-pangolin-url.pangolin.dev/api/docs`
-- **ReDoc**: `https://your-pangolin-url.pangolin.dev/api/redoc`
+- **Root**: `https://imigo.tw/`
+- **Health Check**: `https://imigo.tw/health`
+- **API Documentation**: `https://imigo.tw/api/docs`
+- **ReDoc**: `https://imigo.tw/api/redoc`
+
+*Replace `imigo.tw` with your actual domain or Pangolin subdomain.*
 
 ### API Routes
 
@@ -164,7 +218,7 @@ Once deployed, your API will be available at your Pangolin URL:
 ### Chat with the Bot
 
 ```bash
-curl -X POST https://your-pangolin-url.pangolin.dev/api/chat/message \
+curl -X POST https://imigo.tw/api/chat/message \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user123",
@@ -176,7 +230,7 @@ curl -X POST https://your-pangolin-url.pangolin.dev/api/chat/message \
 ### Translate Text
 
 ```bash
-curl -X POST https://your-pangolin-url.pangolin.dev/api/translate/ \
+curl -X POST https://imigo.tw/api/translate/ \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Hello, how are you?",
@@ -221,30 +275,47 @@ curl -X POST https://your-pangolin-url.pangolin.dev/api/translate/ \
    docker-compose logs backend
    ```
 
+### DNS Issues (Custom Domain)
+
+1. Verify DNS is pointing to your server:
+   ```bash
+   dig imigo.tw
+   # Should return your server's public IP
+   ```
+
+2. Check that ports 80 and 443 are open:
+   ```bash
+   sudo ufw status
+   # Or check your cloud provider's firewall settings
+   ```
+
+3. Wait for DNS propagation (can take up to 48 hours, usually faster)
+
 ### LINE Webhook Issues
 
-1. Ensure the webhook URL in LINE console matches your Pangolin URL
+1. Ensure the webhook URL in LINE console matches your configured URL
 2. Check that the `/webhook` endpoint is accessible:
    ```bash
-   curl https://your-pangolin-url.pangolin.dev/webhook
+   curl https://imigo.tw/webhook
    ```
 
 ## Advantages of Pangolin Self-Host Community Edition over Traefik
 
 ### Pangolin Benefits:
-- ✅ **Zero Configuration** - No DNS, SSL certificates, or port forwarding needed
-- ✅ **Automatic HTTPS** - SSL certificates managed automatically
-- ✅ **Works Anywhere** - Behind NAT, firewalls, or on your laptop
-- ✅ **Instant Setup** - Get a public URL in seconds
+- ✅ **Minimal Configuration** - Simple DNS setup, automatic SSL certificates
+- ✅ **Automatic HTTPS** - SSL certificates managed automatically (Let's Encrypt)
+- ✅ **Custom Domains** - Use your own domain (e.g., imigo.tw) for free
+- ✅ **Flexible Deployment** - Works with custom domains OR random subdomains
 - ✅ **Free Forever** - Community edition has no costs
-- ✅ **Self-Hosted** - Run on your own infrastructure
+- ✅ **Self-Hosted** - Full control over your infrastructure
 - ✅ **No Account Required** - Can run without registration (basic mode)
+- ✅ **Easy Maintenance** - Automatic certificate renewal
 
 ### When to Use Traefik Instead:
-- You need custom domain names (without using Pangolin paid plans)
-- You require advanced routing rules
-- You're running a production service with high traffic
-- You need full control over SSL certificates and infrastructure
+- You require very advanced routing rules and middlewares
+- You need multiple backend services with complex routing
+- You want more granular control over every aspect of the proxy
+- You need advanced features like circuit breakers, retries, etc.
 
 ## Monitoring
 
@@ -324,24 +395,32 @@ For production deployments, you may want to use a custom domain:
 
 ## Development vs Production
 
-### Development (Current Setup with Community Edition)
+### Development Mode
+**Without Custom Domain (DOMAIN empty):**
 - Uses free Pangolin Self-Host Community Edition
-- Random URL (changes on restart in basic mode)
+- Random subdomain (e.g., random-1234.pangolin.dev)
 - Perfect for testing and development
 - No DNS configuration needed
-- No account or token required (basic mode)
+- No account or token required
 - Completely self-hosted and free
 
-### Production (Recommended Options)
-1. **Pangolin with Token:**
-   - Get a Pangolin account for persistent URLs
-   - Use custom domains with paid plans
-   - Access analytics and monitoring
+### Production Mode (Current Setup)
+**With Custom Domain (DOMAIN=imigo.tw):**
+- ✅ Uses free Pangolin Self-Host Community Edition
+- ✅ Your own domain (e.g., imigo.tw, www.imigo.tw, api.imigo.tw)
+- ✅ Automatic HTTPS with Let's Encrypt
+- ✅ Professional appearance for users
+- ✅ Persistent URL (doesn't change on restart)
+- ✅ Simple DNS A record configuration
+- ✅ No account or token required (basic mode)
+- ✅ Completely self-hosted and free
 
-2. **Traditional Setup:**
-   - Migrate to Traefik/Nginx with dedicated server
-   - Full control over infrastructure
-   - Custom domain with your own SSL certificates
+### Enhanced Production (Optional)
+**With Pangolin Token:**
+- All production mode features, plus:
+- Analytics dashboard
+- Advanced monitoring
+- Priority support
 
 ## Support
 
