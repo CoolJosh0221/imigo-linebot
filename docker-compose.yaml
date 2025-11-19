@@ -1,30 +1,24 @@
 version: '3.8'
 services:
-  # Traefik Reverse Proxy
-  traefik:
-    image: traefik:v2.10
-    container_name: traefik
+  # Pangolin Tunnel Service (Self-Host Community Edition)
+  pangolin:
+    image: pangolindev/pangolin:community
+    container_name: pangolin
     command:
-      - "--configFile=/etc/traefik/traefik.yml"
+      - "tunnel"
+      - "http"
+      - "--url"
+      - "http://backend:8000"
+      - "--hostname"
+      - "${DOMAIN:-}"
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"  # Traefik dashboard (optional, secure it in production)
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-      - ./letsencrypt:/letsencrypt
-    labels:
-      - "traefik.enable=true"
-      # Dashboard
-      - "traefik.http.routers.dashboard.rule=Host(`traefik.imigo.tw`)"
-      - "traefik.http.routers.dashboard.service=api@internal"
-      - "traefik.http.routers.dashboard.entrypoints=websecure"
-      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
-      # Basic auth for dashboard (optional)
-      # - "traefik.http.routers.dashboard.middlewares=auth"
-      # - "traefik.http.middlewares.auth.basicauth.users=admin:$$apr1$$..."  # Use htpasswd to generate
+    environment:
+      - PANGOLIN_TOKEN=${PANGOLIN_TOKEN:-}
+      - DOMAIN=${DOMAIN:-}
+    depends_on:
+      - backend
     restart: unless-stopped
     networks:
       - bot-network
@@ -35,8 +29,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: migrant-worker-bot
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     environment:
       - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
@@ -48,18 +42,8 @@ services:
     volumes:
       - ./data:/data
       - ./config:/app/config:ro
-    labels:
-      - "traefik.enable=true"
-      # Main API routes
-      - "traefik.http.routers.backend.rule=Host(`imigo.tw`) || Host(`www.imigo.tw`) || Host(`api.imigo.tw`)"
-      - "traefik.http.routers.backend.entrypoints=websecure"
-      - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
-      - "traefik.http.services.backend.loadbalancer.server.port=8000"
-      # Middlewares
-      - "traefik.http.routers.backend.middlewares=rateLimit,securityHeaders,compress"
     depends_on:
       - vllm
-      - traefik
     restart: unless-stopped
     networks:
       - bot-network
