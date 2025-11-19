@@ -1,26 +1,38 @@
 # Deployment Guide for IMIGO API
 
-This guide explains how to deploy the IMIGO API using Pangolin tunnel for secure HTTPS access.
+This guide explains how to deploy the IMIGO API using Pangolin Self-Host Community Edition for secure HTTPS access.
 
 ## Prerequisites
 
 - Docker and Docker Compose installed
-- A Pangolin account and token (sign up at https://pangolin.com/)
 - NVIDIA GPU with drivers installed (for vLLM)
+- (Optional) Pangolin account for enhanced features
 
-## What is Pangolin?
+## What is Pangolin Self-Host Community Edition?
 
-Pangolin is a secure tunnel service that provides:
+Pangolin Self-Host Community Edition is a free, open-source tunnel service that provides:
 - **Automatic HTTPS** - No need to manage SSL certificates
 - **Public URLs** - Expose your local services to the internet
 - **No Port Forwarding** - Works behind firewalls and NAT
 - **Easy Setup** - No DNS configuration required
+- **Self-Hosted** - Run on your own infrastructure
+- **Free Forever** - Community edition is completely free
 
-## Step 1: Get Your Pangolin Token
+## Step 1: Configure Pangolin Token (Optional)
 
-1. Sign up at https://pangolin.com/
+Pangolin can run without a token for basic tunneling, or you can use a token for additional features:
+
+**Without Token (Basic Mode):**
+- Free random subdomain
+- Automatic HTTPS
+- No registration required
+- Perfect for development and testing
+
+**With Token (Enhanced Mode):**
+1. Sign up at https://pangolin.com/ (optional)
 2. Create a new tunnel token from your dashboard
-3. Copy the token for use in the next step
+3. Copy the token to use in `.env` file
+4. Benefits: Custom subdomains, analytics, persistent URLs
 
 ## Step 2: Set Environment Variables
 
@@ -33,8 +45,8 @@ cp .env.example .env
 Edit `.env` and fill in your credentials:
 
 ```bash
-# Pangolin Tunnel Token
-PANGOLIN_TOKEN=your_pangolin_token_here
+# Pangolin Tunnel Token (OPTIONAL - leave empty for basic mode)
+PANGOLIN_TOKEN=
 
 # LINE Bot Credentials
 LINE_CHANNEL_SECRET=your_actual_channel_secret
@@ -43,6 +55,8 @@ LINE_CHANNEL_ACCESS_TOKEN=your_actual_access_token
 # Google Maps API (optional)
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
+
+**Note:** You can leave `PANGOLIN_TOKEN` empty to use Pangolin in basic mode (no account required).
 
 ## Step 3: Build and Deploy
 
@@ -53,7 +67,7 @@ docker-compose up -d
 ```
 
 This will start:
-- **Pangolin** - Secure tunnel service with automatic HTTPS
+- **Pangolin (Self-Host Community Edition)** - Secure tunnel service with automatic HTTPS
 - **Backend** - FastAPI application
 - **vLLM** - AI model server
 
@@ -215,20 +229,22 @@ curl -X POST https://your-pangolin-url.pangolin.dev/api/translate/ \
    curl https://your-pangolin-url.pangolin.dev/webhook
    ```
 
-## Advantages of Pangolin over Traefik
+## Advantages of Pangolin Self-Host Community Edition over Traefik
 
 ### Pangolin Benefits:
 - ✅ **Zero Configuration** - No DNS, SSL certificates, or port forwarding needed
 - ✅ **Automatic HTTPS** - SSL certificates managed automatically
 - ✅ **Works Anywhere** - Behind NAT, firewalls, or on your laptop
 - ✅ **Instant Setup** - Get a public URL in seconds
-- ✅ **Built-in Security** - DDoS protection and rate limiting included
+- ✅ **Free Forever** - Community edition has no costs
+- ✅ **Self-Hosted** - Run on your own infrastructure
+- ✅ **No Account Required** - Can run without registration (basic mode)
 
 ### When to Use Traefik Instead:
-- You need custom domain names
+- You need custom domain names (without using Pangolin paid plans)
 - You require advanced routing rules
 - You're running a production service with high traffic
-- You need full control over SSL certificates
+- You need full control over SSL certificates and infrastructure
 
 ## Monitoring
 
@@ -244,13 +260,15 @@ docker-compose logs -f
 docker stats
 ```
 
-### Pangolin Dashboard
+### Pangolin Dashboard (If Using Token)
 
-Visit https://pangolin.com/dashboard to:
+If you're using a Pangolin token, visit https://pangolin.com/dashboard to:
 - View tunnel status
 - See request analytics
 - Manage tokens
 - Configure custom domains (paid plans)
+
+**Note:** Dashboard access requires a Pangolin account and token.
 
 ## Stopping the Service
 
@@ -306,17 +324,24 @@ For production deployments, you may want to use a custom domain:
 
 ## Development vs Production
 
-### Development (Current Setup)
-- Uses free Pangolin tunnel
-- Random URL (changes on restart)
+### Development (Current Setup with Community Edition)
+- Uses free Pangolin Self-Host Community Edition
+- Random URL (changes on restart in basic mode)
 - Perfect for testing and development
 - No DNS configuration needed
+- No account or token required (basic mode)
+- Completely self-hosted and free
 
-### Production (Recommended)
-- Use Pangolin with custom domain
-- Or migrate to Traefik/Nginx with dedicated server
-- Set up proper monitoring
-- Configure backups
+### Production (Recommended Options)
+1. **Pangolin with Token:**
+   - Get a Pangolin account for persistent URLs
+   - Use custom domains with paid plans
+   - Access analytics and monitoring
+
+2. **Traditional Setup:**
+   - Migrate to Traefik/Nginx with dedicated server
+   - Full control over infrastructure
+   - Custom domain with your own SSL certificates
 
 ## Support
 

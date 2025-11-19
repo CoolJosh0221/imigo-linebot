@@ -1,15 +1,16 @@
 version: '3.8'
 services:
-  # Pangolin Tunnel Service
+  # Pangolin Tunnel Service (Self-Host Community Edition)
   pangolin:
-    image: pangolin/client:latest
+    image: pangolindev/pangolin:community
     container_name: pangolin
     command:
+      - "tunnel"
       - "http"
       - "--url"
       - "http://backend:8000"
     environment:
-      - PANGOLIN_TOKEN=${PANGOLIN_TOKEN}
+      - PANGOLIN_TOKEN=${PANGOLIN_TOKEN:-}
     depends_on:
       - backend
     restart: unless-stopped
