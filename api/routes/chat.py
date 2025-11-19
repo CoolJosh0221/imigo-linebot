@@ -2,6 +2,7 @@
 import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +12,7 @@ router = APIRouter(prefix="/api/chat", tags=["Chat"])
 class ChatRequest(BaseModel):
     user_id: str
     message: str
-    language: str = "id"
+    language: Optional[str] = "auto"  # "auto" for auto-detection, or specific language code
 
 
 class ChatResponse(BaseModel):
@@ -32,17 +33,25 @@ async def send_message(request: ChatRequest):
 
     Args:
         request: Chat request with user_id, message, and optional language
+                 Set language to "auto" (default) for automatic language detection
 
     Returns:
-        ChatResponse with the bot's reply
+        ChatResponse with the bot's reply and detected/used language
     """
-    from main import ai_service, db_service
+    from main import ai_service, db_service, language_detection_service
 
     try:
-        # Set user language if provided
+        # Detect language if set to "auto" or not provided
+        detected_language = request.language
+        if not request.language or request.language == "auto":
+            detected_language = language_detection_service.detect_language(request.message)
+            logger.info(f"Auto-detected language: {detected_language} for user {request.user_id[:8]}")
+
+        # Set user language if detected/provided
         current_lang = await db_service.get_user_language(request.user_id)
-        if not current_lang or current_lang != request.language:
-            await db_service.set_user_language(request.user_id, request.language)
+        if not current_lang or current_lang != detected_language:
+            await db_service.set_user_language(request.user_id, detected_language)
+            logger.info(f"Updated user {request.user_id[:8]} language to: {detected_language}")
 
         # Generate response
         response = await ai_service.generate_response(request.user_id, request.message)
@@ -51,7 +60,7 @@ async def send_message(request: ChatRequest):
             user_id=request.user_id,
             message=request.message,
             response=response,
-            language=request.language,
+            language=detected_language,
         )
     except Exception as e:
         logger.error(f"Chat error: {e}")
