@@ -1,0 +1,52 @@
+http:
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+
+  routers:
+    # HTTP to HTTPS redirect router
+    main-app-router-redirect:
+      rule: "Host(`${DOMAIN:-imigo.tw}`)"
+      service: backend-service
+      entryPoints:
+        - web
+      middlewares:
+        - redirect-to-https
+
+    # Pangolin Dashboard router (for /auth and /dashboard paths)
+    pangolin-dashboard-router:
+      rule: "Host(`${DOMAIN:-imigo.tw}`) && (PathPrefix(`/auth`) || PathPrefix(`/dashboard`) || PathPrefix(`/api/v1`))"
+      service: next-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+
+    # Backend API router (handles all other paths)
+    backend-router:
+      rule: "Host(`${DOMAIN:-imigo.tw}`) && !PathPrefix(`/auth`) && !PathPrefix(`/dashboard`) && !PathPrefix(`/api/v1`)"
+      service: backend-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    # Pangolin Next.js Dashboard
+    next-service:
+      loadBalancer:
+        servers:
+          - url: "http://pangolin:3002"
+
+    # Pangolin API Service
+    api-service:
+      loadBalancer:
+        servers:
+          - url: "http://pangolin:3000"
+
+    # Your FastAPI Backend
+    backend-service:
+      loadBalancer:
+        servers:
+          - url: "http://backend:8000"

@@ -23,6 +23,9 @@ dependencies = [
     # Utilities
     "pyyaml>=6.0.3",
     "attrs>=23.0.0",
+
+    # Language Detection
+    "langdetect>=1.0.9",
 ]
 
 [project.optional-dependencies]

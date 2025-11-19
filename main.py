@@ -23,6 +23,7 @@ from linebot.v3.webhooks import (
 from database.database import DatabaseService
 from services.ai_service import AIService
 from services.translation_service import TranslationService
+from services.language_detection import LanguageDetectionService
 from config import load_config, get_config
 
 logging.basicConfig(level=logging.INFO)
@@ -31,6 +32,7 @@ log = logging.getLogger(__name__)
 db_service: DatabaseService
 ai_service: AIService
 translation_service: TranslationService
+language_detection_service: LanguageDetectionService
 
 line_async_client: AsyncApiClient
 line_messaging_api: AsyncMessagingApi
@@ -47,7 +49,7 @@ app = FastAPI(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_service, ai_service, translation_service
+    global db_service, ai_service, translation_service, language_detection_service
     global line_async_client, line_messaging_api, line_parser
 
     cfg = load_config()
@@ -56,9 +58,10 @@ async def lifespan(app: FastAPI):
     db_service = DatabaseService()
     await db_service.init_db()
 
-    # AI and translation
+    # AI, translation, and language detection
     ai_service = AIService(db_service, cfg)
     translation_service = TranslationService(cfg)
+    language_detection_service = LanguageDetectionService(default_language=cfg.bot.language)
 
     line_config = Configuration(access_token=cfg.line_token)
     line_async_client = AsyncApiClient(line_config)
@@ -152,7 +155,10 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
     # Personal chat - use AI service
     lang = await db_service.get_user_language(user_id)
     if not lang:
-        await db_service.set_user_language(user_id, cfg.bot.language)
+        # Auto-detect language from user's first message
+        detected_lang = language_detection_service.detect_language(text)
+        log.info(f"New user {user_id[:8]}, detected language: {detected_lang}")
+        await db_service.set_user_language(user_id, detected_lang)
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
