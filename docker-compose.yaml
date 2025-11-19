@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Pangolin Dashboard and API
   pangolin:
-    image: fosrl/pangolin:latest
+    image: docker.io/fosrl/pangolin:latest
     container_name: pangolin
     restart: unless-stopped
     volumes:
@@ -20,7 +20,7 @@ services:
 
   # Gerbil WireGuard Tunnel Service
   gerbil:
-    image: fosrl/gerbil:latest
+    image: docker.io/fosrl/gerbil:latest
     container_name: gerbil
     restart: unless-stopped
     depends_on:
@@ -45,7 +45,7 @@ services:
 
   # Traefik Reverse Proxy
   traefik:
-    image: traefik:v3.4.0
+    image: docker.io/traefik:v3.4.0
     container_name: traefik
     restart: unless-stopped
     network_mode: service:gerbil
