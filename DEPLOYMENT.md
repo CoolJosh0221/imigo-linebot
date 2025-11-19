@@ -4,11 +4,19 @@ This guide explains how to deploy the IMIGO API using Pangolin Self-Host Communi
 
 ## Prerequisites
 
+### Required for All Deployments:
 - Docker and Docker Compose installed
 - NVIDIA GPU with drivers installed (for vLLM)
-- A domain name (e.g., imigo.tw) pointing to your server (for custom domain)
-- Ports 80 and 443 open on your firewall
-- (Optional) Pangolin account for enhanced features
+
+### Required ONLY for Custom Domain (imigo.tw):
+- A domain name (e.g., imigo.tw)
+- Public IP address with ports 80 and 443 open
+- DNS access to configure A records
+
+### Optional:
+- Pangolin account for enhanced features
+
+**Note:** If you **don't have a public IP** (behind NAT, home network, etc.), use the random subdomain option - no public IP or port forwarding needed!
 
 ## What is Pangolin Self-Host Community Edition?
 
@@ -21,9 +29,36 @@ Pangolin Self-Host Community Edition is a free, open-source tunnel service that 
 - **Self-Hosted** - Run on your own infrastructure
 - **Free Forever** - Community edition is completely free
 
-## Step 1: DNS Configuration (For Custom Domain)
+## Step 1: Choose Your Deployment Mode
 
-If you want to use your custom domain `imigo.tw`, configure DNS records:
+### Mode A: Without Public IP (Pangolin Tunnel - Recommended for Most Users)
+
+**Perfect if you:**
+- Don't have a public IP address
+- Are behind NAT or a firewall
+- Are on a home network
+- Can't configure port forwarding
+- Want the simplest setup
+
+**What you get:**
+- Random subdomain like `random-abc123.pangolin.dev`
+- Automatic HTTPS
+- Works from anywhere
+- **No DNS or network configuration needed!**
+
+**Setup:** Leave `DOMAIN=` empty in `.env` (see Step 3)
+
+---
+
+### Mode B: With Custom Domain (Requires Public IP)
+
+**Perfect if you:**
+- Have a public IP address
+- Own a domain (e.g., imigo.tw)
+- Can open ports 80 and 443
+- Want a professional custom domain
+
+**Setup:** Configure DNS records pointing to your server's public IP:
 
 ```
 A Record:     imigo.tw           -> YOUR_SERVER_PUBLIC_IP
@@ -71,8 +106,13 @@ Edit `.env` and fill in your credentials:
 PANGOLIN_TOKEN=
 
 # Domain Configuration
-# Set your custom domain or leave empty for random subdomain
-DOMAIN=imigo.tw
+# IMPORTANT: Choose ONE option below:
+
+# Option A: NO PUBLIC IP (Tunnel Mode) - Leave empty for random subdomain
+DOMAIN=
+
+# Option B: WITH PUBLIC IP (Custom Domain) - Uncomment and set your domain
+# DOMAIN=imigo.tw
 
 # LINE Bot Credentials
 LINE_CHANNEL_SECRET=your_actual_channel_secret
@@ -83,8 +123,8 @@ GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
 **Important Notes:**
-- Set `DOMAIN=imigo.tw` to use your custom domain (requires DNS configured)
-- Leave `DOMAIN=` empty for a random pangolin subdomain
+- **No Public IP?** Leave `DOMAIN=` empty (default) - works anywhere!
+- **Have Public IP?** Set `DOMAIN=imigo.tw` (requires DNS configured)
 - `PANGOLIN_TOKEN` is optional - leave empty for basic mode (no account required)
 
 ## Step 4: Build and Deploy
