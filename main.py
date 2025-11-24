@@ -96,11 +96,12 @@ app.add_middleware(
 )
 
 # Include API routers
-from api.routes import chat, translation, system
+from api.routes import chat, translation, system, rich_menu
 
 app.include_router(chat.router)
 app.include_router(translation.router)
 app.include_router(system.router)
+app.include_router(rich_menu.router)
 
 
 def get_line_api():
@@ -133,6 +134,32 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
             markAsReadToken=event.message.mark_as_read_token
         ),
     )
+
+    # Handle language switching command
+    if text.strip().lower().startswith("/lang"):
+        parts = text.strip().split()
+        if len(parts) == 2:
+            lang_code = parts[1].lower()
+            if cfg.is_valid_language(lang_code):
+                await db_service.set_user_language(user_id, lang_code)
+                log.info(f"User {user_id[:8]} changed language to {lang_code}")
+                await line_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=cfg.get_message("language_changed", lang_code))],
+                    )
+                )
+                return
+
+        # Invalid language code or format
+        current_lang = await db_service.get_user_language(user_id) or cfg.language
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=cfg.get_message("language_select", current_lang))],
+            )
+        )
+        return
 
     group_id = getattr(event.source, "group_id", None)
     if group_id:
@@ -204,16 +231,11 @@ async def handle_postback(event: PostbackEvent) -> None:
         )
 
     elif data == "category_language":
-        lang = await db_service.get_user_language(user_id)
-        messages = {
-            "id": "🌐 Pilih bahasa Anda:\nKetik: /lang id (Indonesia)\n/lang zh (中文)\n/lang en (English)",
-            "zh": "🌐 選擇您的語言：\n輸入: /lang id (印尼文)\n/lang zh (中文)\n/lang en (英文)",
-            "en": "🌐 Choose your language:\nType: /lang id (Indonesian)\n/lang zh (Chinese)\n/lang en (English)",
-        }
+        lang = await db_service.get_user_language(user_id) or cfg.language
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=messages.get(lang, messages["en"]))],
+                messages=[TextMessage(text=cfg.get_message("language_select", lang))],
             )
         )
 

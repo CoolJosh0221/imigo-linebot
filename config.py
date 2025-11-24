@@ -19,6 +19,8 @@ Saya dapat membantu dengan:
 
 Silakan ajukan pertanyaan Anda!""",
         "cleared": "✅ Riwayat percakapan telah dihapus.\nAnda dapat memulai percakapan baru!",
+        "language_changed": "✅ Bahasa telah diubah ke Bahasa Indonesia.\nSaya sekarang akan merespons dalam bahasa Indonesia!",
+        "language_select": "🌐 Pilih bahasa Anda:\nKetik: /lang id (Indonesia)\n/lang zh (中文)\n/lang en (English)",
         "help": """🤖 Cara menggunakan IMIGO:
 
 Ketik pertanyaan Anda dalam bahasa apa pun, dan saya akan membantu!
@@ -45,6 +47,8 @@ Kategori bantuan:
 
 請隨時提出您的問題！""",
         "cleared": "✅ 對話記錄已清除。\n您可以開始新的對話！",
+        "language_changed": "✅ 語言已更改為繁體中文。\n我現在將用中文回應！",
+        "language_select": "🌐 選擇您的語言：\n輸入: /lang id (印尼文)\n/lang zh (中文)\n/lang en (英文)",
         "help": """🤖 如何使用 IMIGO：
 
 用任何語言輸入您的問題，我會幫助您！
@@ -71,6 +75,8 @@ I can help with:
 
 Please ask me anything!""",
         "cleared": "✅ Chat history has been cleared.\nYou can start a new conversation!",
+        "language_changed": "✅ Language changed to English.\nI will now respond in English!",
+        "language_select": "🌐 Choose your language:\nType: /lang id (Indonesian)\n/lang zh (Chinese)\n/lang en (English)",
         "help": """🤖 How to use IMIGO:
 
 Type your question in any language, and I'll help you!
@@ -83,6 +89,13 @@ Help categories:
 • 🏠 Daily life
 • 🚨 Emergency contacts""",
     },
+}
+
+# Supported languages
+SUPPORTED_LANGUAGES = {
+    "id": "Bahasa Indonesia",
+    "zh": "繁體中文",
+    "en": "English",
 }
 
 # Emergency contacts for Taiwan
@@ -122,9 +135,10 @@ class BotConfig:
                 "LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN must be set in environment variables"
             )
 
-    def get_message(self, key: str) -> str:
-        """Get a message in the configured language"""
-        lang_messages = MESSAGES.get(self.language, MESSAGES["en"])
+    def get_message(self, key: str, language: str = None) -> str:
+        """Get a message in the specified language (or bot's default language)"""
+        lang = language or self.language
+        lang_messages = MESSAGES.get(lang, MESSAGES["en"])
         return lang_messages.get(key, key)
 
     def get_emergency_info(self) -> str:
@@ -133,6 +147,11 @@ class BotConfig:
         for label, value in EMERGENCY_CONTACTS.items():
             lines.append(f"- {label.replace('_', ' ').title()}: {value}")
         return "\n".join(lines)
+
+    @staticmethod
+    def is_valid_language(lang_code: str) -> bool:
+        """Check if a language code is supported"""
+        return lang_code in SUPPORTED_LANGUAGES
 
 
 _config: Optional[BotConfig] = None
