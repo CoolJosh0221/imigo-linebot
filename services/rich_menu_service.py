@@ -86,6 +86,30 @@ class RichMenuService:
             logger.error(f"Failed to create rich menu: {e}")
             return None
 
+    async def upload_rich_menu_image(self, rich_menu_id: str, image_path: str) -> bool:
+        """
+        Upload an image to a rich menu
+
+        Args:
+            rich_menu_id: ID of the rich menu
+            image_path: Path to the image file
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            with open(image_path, "rb") as f:
+                await self.line_api.set_rich_menu_image(
+                    rich_menu_id=rich_menu_id,
+                    body=f.read(),
+                    _headers={"Content-Type": "image/png"},
+                )
+            logger.info(f"Uploaded image to rich menu: {rich_menu_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Failed to upload rich menu image: {e}")
+            return False
+
     async def set_default_rich_menu(self, rich_menu_id: str) -> bool:
         """
         Set a rich menu as the default for all users
