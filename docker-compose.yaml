@@ -1,73 +1,14 @@
 version: '3.8'
 
 services:
-  # Pangolin Dashboard and API
-  pangolin:
-    image: fosrl/pangolin:latest
-    container_name: pangolin
-    restart: unless-stopped
-    volumes:
-      - ./config:/app/config
-      - pangolin-data:/var/certificates
-      - pangolin-data:/var/dynamic
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/api/v1/"]
-      interval: "3s"
-      timeout: "3s"
-      retries: 15
-    networks:
-      - bot-network
-
-  # Gerbil WireGuard Tunnel Service
-  gerbil:
-    image: fosrl/gerbil:latest
-    container_name: gerbil
-    restart: unless-stopped
-    depends_on:
-      pangolin:
-        condition: service_healthy
-    command:
-      - --reachableAt=http://gerbil:3004
-      - --generateAndSaveKeyTo=/var/config/key
-      - --remoteConfig=http://pangolin:3001/api/v1/
-    volumes:
-      - ./config/:/var/config
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    ports:
-      - 51820:51820/udp
-      - 21820:21820/udp
-      - 443:443
-      - 80:80
-    networks:
-      - bot-network
-
-  # Traefik Reverse Proxy
-  traefik:
-    image: traefik:v3.4.0
-    container_name: traefik
-    restart: unless-stopped
-    network_mode: service:gerbil
-    depends_on:
-      pangolin:
-        condition: service_healthy
-    command:
-      - --configFile=/etc/traefik/traefik_config.yml
-    volumes:
-      - ./config/traefik:/etc/traefik:ro
-      - ./config/letsencrypt:/letsencrypt
-      - pangolin-data:/var/certificates:ro
-      - pangolin-data:/var/dynamic:ro
-
   # FastAPI Backend Service
   backend:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: migrant-worker-bot
-    expose:
-      - "8000"
+    ports:
+      - "8000:8000"
     environment:
       - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
@@ -81,7 +22,6 @@ services:
       - ./config:/app/config:ro
     depends_on:
       - vllm
-      - pangolin
     restart: unless-stopped
     networks:
       - bot-network
@@ -98,7 +38,7 @@ services:
       - "--model"
       - "/models/sealion-model"
       - "--dtype"
-      - "bfloat16" 
+      - "bfloat16"
       - "--gpu-memory-utilization"
       - "0.85"
       - "--max-model-len"
@@ -120,9 +60,22 @@ services:
     networks:
       - bot-network
 
+  # ngrok tunnel - Expose backend to internet with HTTPS
+  ngrok:
+    image: docker.io/ngrok/ngrok:latest
+    container_name: ngrok
+    command:
+      - "http"
+      - "backend:8000"
+      - "--authtoken=${NGROK_AUTHTOKEN}"
+    ports:
+      - "4040:4040"  # ngrok web interface
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - bot-network
+
 networks:
   bot-network:
     driver: bridge
-
-volumes:
-  pangolin-data:
