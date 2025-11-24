@@ -2,23 +2,31 @@
 
 ## Dynamic Language Switching
 
-IMIGO now supports dynamic language switching, allowing users to change their preferred language at any time.
+IMIGO supports multiple ways for users to change their preferred language at any time.
 
 ### Supported Languages
 
-- **Indonesian** (`id`) - Bahasa Indonesia
-- **Traditional Chinese** (`zh`) - 繁體中文
-- **English** (`en`)
+- **Indonesian** (`id`) - Bahasa Indonesia 🇮🇩
+- **Traditional Chinese** (`zh`) - 繁體中文 🇹🇼
+- **English** (`en`) - English 🇬🇧
 
 ### How to Switch Language
 
-Users can switch language by sending a command:
-
+**Method 1: Text Command**
 ```
 /lang id   # Switch to Indonesian
 /lang zh   # Switch to Chinese
 /lang en   # Switch to English
 ```
+
+**Method 2: Quick Reply Buttons**
+- Tap the "🌐 Language" button in the rich menu
+- Bot shows language options with quick reply buttons
+- Tap your preferred language
+
+**Method 3: Postback Actions**
+- Rich menu or flex messages can trigger language change
+- Use postback data: `lang_id`, `lang_zh`, or `lang_en`
 
 ### Automatic Language Detection
 
@@ -27,6 +35,52 @@ When a new user first interacts with the bot, IMIGO automatically detects their 
 ### Language Persistence
 
 User language preferences are stored in the database and persist across sessions.
+
+---
+
+## Smart Intent Detection
+
+IMIGO intelligently detects user intent to provide appropriate responses without always calling the AI.
+
+### Supported Intents
+
+1. **Commands** - `/lang`, `/help`, `/emergency`, `/clear`
+2. **Greetings** - "hi", "hello", "你好", "halo"
+3. **Thanks** - "thanks", "terima kasih", "謝謝"
+4. **Goodbye** - "bye", "sampai jumpa", "再見"
+5. **Emergency** - "emergency", "darurat", "緊急"
+6. **Help Requests** - "help", "bantuan", "幫助"
+7. **Queries** - General questions (sent to AI)
+
+### How It Works
+
+```
+User: "Hello"
+Bot: Quick response without AI call
+
+User: "How do I apply for a work permit?"
+Bot: Uses AI to provide detailed answer
+
+User: "Emergency! I'm injured"
+Bot: Shows emergency contacts immediately
+
+User: "/help"
+Bot: Shows help message
+```
+
+### Benefits
+
+- **Faster responses** for simple interactions
+- **Lower costs** by reducing AI calls
+- **Better UX** with contextually appropriate replies
+- **Emergency handling** prioritizes urgent situations
+
+### Available Commands
+
+- `/lang [id|zh|en]` - Change language
+- `/help` - Show help message
+- `/emergency` - Display emergency contacts
+- `/clear` - Clear chat history
 
 ---
 
