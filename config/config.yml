@@ -19,7 +19,6 @@ security:
   jwtSecret: "CHANGE_THIS_IN_PRODUCTION_TO_A_RANDOM_STRING"
   sessionSecret: "CHANGE_THIS_IN_PRODUCTION_TO_A_RANDOM_STRING"
 
-# Tunnel settings
-tunnel:
-  enabled: true
-  gerbilUrl: http://gerbil:3004
+# Gerbil tunnel configuration
+gerbil:
+  base_endpoint: http://gerbil:3004
