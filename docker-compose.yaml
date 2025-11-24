@@ -60,6 +60,22 @@ services:
     networks:
       - bot-network
 
+  # ngrok tunnel - Expose backend to internet with HTTPS
+  ngrok:
+    image: docker.io/ngrok/ngrok:latest
+    container_name: ngrok
+    command:
+      - "http"
+      - "backend:8000"
+      - "--authtoken=${NGROK_AUTHTOKEN}"
+    ports:
+      - "4040:4040"  # ngrok web interface
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - bot-network
+
 networks:
   bot-network:
     driver: bridge

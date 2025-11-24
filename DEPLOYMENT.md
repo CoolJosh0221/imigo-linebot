@@ -1,15 +1,22 @@
 # Deployment Guide for IMIGO API
 
-Simple deployment guide for the IMIGO LINE Bot API with vLLM.
+Simple deployment guide for the IMIGO LINE Bot API with vLLM and ngrok tunnel for internet access.
 
 ## Prerequisites
 
 - Docker and Docker Compose (or Podman) installed
 - NVIDIA GPU with drivers installed (for vLLM)
+- ngrok account (free) - Sign up at https://ngrok.com/
 
 ## Quick Start
 
-### Step 1: Set Environment Variables
+### Step 1: Get ngrok Auth Token
+
+1. Sign up at https://dashboard.ngrok.com/signup (free account)
+2. Go to https://dashboard.ngrok.com/get-started/your-authtoken
+3. Copy your authtoken
+
+### Step 2: Set Environment Variables
 
 Copy `.env.example` to `.env`:
 
@@ -23,6 +30,9 @@ Edit `.env` and fill in your credentials:
 # Bot Configuration
 DEFAULT_LANGUAGE=id
 
+# ngrok Auth Token (required for internet access)
+NGROK_AUTHTOKEN=your_ngrok_authtoken_here
+
 # LINE Bot Credentials
 LINE_CHANNEL_SECRET=your_actual_channel_secret
 LINE_CHANNEL_ACCESS_TOKEN=your_actual_access_token
@@ -31,7 +41,7 @@ LINE_CHANNEL_ACCESS_TOKEN=your_actual_access_token
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
-### Step 2: Build and Deploy
+### Step 3: Build and Deploy
 
 Start all services with Docker Compose:
 
@@ -42,8 +52,30 @@ docker-compose up -d
 This will start:
 - **Backend** - FastAPI application (port 8000)
 - **vLLM** - AI model server (port 8001)
+- **ngrok** - Secure tunnel to expose your API to the internet with HTTPS
 
-### Step 3: Verify Deployment
+### Step 4: Get Your Public URL
+
+Once ngrok starts, get your public HTTPS URL:
+
+**Option 1: Check ngrok logs**
+```bash
+docker-compose logs ngrok
+```
+
+Look for a line like:
+```
+Forwarding https://abc-123-xyz.ngrok-free.app -> http://backend:8000
+```
+
+**Option 2: Visit ngrok web interface**
+```
+http://localhost:4040
+```
+
+The ngrok dashboard will show your public URL and all requests.
+
+### Step 5: Verify Deployment
 
 Check container status:
 
@@ -61,24 +93,40 @@ docker-compose logs -f backend
 
 # vLLM logs
 docker-compose logs -f vllm
+
+# ngrok tunnel logs
+docker-compose logs -f ngrok
 ```
 
-Test your API:
+Test your API locally:
 
 ```bash
 curl http://localhost:8000/health
 ```
 
+Test your API via internet:
+
+```bash
+curl https://your-ngrok-url.ngrok-free.app/health
+```
+
 ## API Endpoints
 
-Your API will be available at `http://localhost:8000`:
+Your API is available at two URLs:
+
+**Locally:**
+- `http://localhost:8000`
+
+**Internet (via ngrok):**
+- `https://your-ngrok-url.ngrok-free.app` (check ngrok logs or dashboard for exact URL)
 
 ### Main Endpoints
 
-- **Root**: `http://localhost:8000/`
-- **Health Check**: `http://localhost:8000/health`
-- **API Documentation**: `http://localhost:8000/api/docs`
-- **ReDoc**: `http://localhost:8000/api/redoc`
+- **Root**: `https://your-ngrok-url.ngrok-free.app/`
+- **Health Check**: `https://your-ngrok-url.ngrok-free.app/health`
+- **API Documentation**: `https://your-ngrok-url.ngrok-free.app/api/docs`
+- **ReDoc**: `https://your-ngrok-url.ngrok-free.app/api/redoc`
+- **ngrok Dashboard**: `http://localhost:4040`
 
 ### API Routes
 
@@ -105,6 +153,17 @@ Your API will be available at `http://localhost:8000`:
 
 ### Chat with the Bot (Auto Language Detection)
 
+**Via ngrok (internet):**
+```bash
+curl -X POST https://your-ngrok-url.ngrok-free.app/api/chat/message \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": "user123",
+    "message": "Bagaimana cara mendapatkan visa kerja?"
+  }'
+```
+
+**Local testing:**
 ```bash
 curl -X POST http://localhost:8000/api/chat/message \
   -H "Content-Type: application/json" \
@@ -119,7 +178,7 @@ The system will automatically detect that the message is in Indonesian and respo
 ### Translate Text
 
 ```bash
-curl -X POST http://localhost:8000/api/translate/ \
+curl -X POST https://your-ngrok-url.ngrok-free.app/api/translate/ \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Hello, how are you?",
@@ -130,15 +189,56 @@ curl -X POST http://localhost:8000/api/translate/ \
 
 ## LINE Bot Configuration
 
-Update your LINE Bot webhook URL in the LINE Developers Console to point to your server:
+Update your LINE Bot webhook URL in the LINE Developers Console:
 
 ```
-http://your-server-ip:8000/webhook
+https://your-ngrok-url.ngrok-free.app/webhook
 ```
 
-**Note:** For production, you should use a reverse proxy (nginx, Caddy) with HTTPS.
+**Important:**
+- Replace `your-ngrok-url.ngrok-free.app` with your actual ngrok URL
+- Get your ngrok URL from: `docker-compose logs ngrok` or `http://localhost:4040`
+- ngrok provides automatic HTTPS - no manual SSL setup needed!
+- Free ngrok URLs change on restart; for persistent URLs, upgrade to ngrok paid plan
+
+## ngrok Features
+
+### Free Plan
+- ✅ Automatic HTTPS
+- ✅ Random subdomain (e.g., `abc-123.ngrok-free.app`)
+- ✅ Works behind firewalls/NAT
+- ✅ Web dashboard at `http://localhost:4040`
+- ⚠️ URL changes on restart
+
+### Paid Plan Benefits
+- 🔒 Reserved domains (persistent URL)
+- 🔒 Custom domains (your own domain)
+- 🔒 More bandwidth
+- 🔒 More simultaneous tunnels
+
+### ngrok Dashboard
+
+Visit `http://localhost:4040` to see:
+- Your current public URL
+- Real-time request logs
+- Request/response details
+- Traffic statistics
 
 ## Troubleshooting
+
+### ngrok Not Starting
+
+1. Check if authtoken is set correctly:
+   ```bash
+   cat .env | grep NGROK_AUTHTOKEN
+   ```
+
+2. Check ngrok logs:
+   ```bash
+   docker-compose logs ngrok
+   ```
+
+3. Verify ngrok account at https://dashboard.ngrok.com/
 
 ### Backend Not Responding
 
@@ -176,9 +276,18 @@ http://your-server-ip:8000/webhook
 
 ## Production Deployment
 
-For production, consider:
+### Option 1: ngrok Paid Plan (Easiest)
+- Upgrade to ngrok paid plan for reserved/custom domains
+- No server configuration needed
+- Automatic HTTPS, DDoS protection, load balancing
+- Perfect for small-to-medium traffic
 
-1. **Reverse Proxy**: Use nginx or Caddy with HTTPS
+### Option 2: Traditional VPS Setup
+If you have a server with public IP:
+
+1. **Skip ngrok**: Remove ngrok service from docker-compose.yaml
+
+2. **Reverse Proxy**: Use nginx or Caddy with HTTPS
    ```nginx
    server {
        listen 443 ssl;
@@ -195,18 +304,18 @@ For production, consider:
    }
    ```
 
-2. **Firewall**: Only expose necessary ports
+3. **Firewall**: Only expose necessary ports
    ```bash
    sudo ufw allow 80/tcp
    sudo ufw allow 443/tcp
    sudo ufw enable
    ```
 
-3. **Monitoring**: Add Prometheus + Grafana for metrics
+4. **Monitoring**: Add Prometheus + Grafana for metrics
 
-4. **Backups**: Set up automated backups of `data/` directory
+5. **Backups**: Set up automated backups of `data/` directory
 
-5. **Updates**:
+6. **Updates**:
    ```bash
    docker-compose pull
    docker-compose up -d
@@ -227,7 +336,9 @@ docker-compose down -v
 ## Support and Documentation
 
 For more information:
-- **API Documentation**: http://localhost:8000/api/docs
+- **API Documentation**: https://your-ngrok-url.ngrok-free.app/api/docs
+- **ngrok Dashboard**: http://localhost:4040
+- **ngrok Documentation**: https://ngrok.com/docs
 - **FastAPI Documentation**: https://fastapi.tiangolo.com/
 - **vLLM Documentation**: https://docs.vllm.ai/
 - **Container Status**: `docker-compose ps`
@@ -235,11 +346,16 @@ For more information:
 
 ## Features
 
+✅ **Internet Access** - Exposed via ngrok with automatic HTTPS
 ✅ **Multi-Language Support** - Automatic language detection for 6 languages
 ✅ **AI-Powered Chat** - Powered by SEA-LION-7B via vLLM
 ✅ **LINE Bot Integration** - Ready for LINE Messaging API
 ✅ **Translation Service** - Built-in translation capabilities
-✅ **Simple Deployment** - Just Docker Compose, no complex setup
+✅ **Simple Deployment** - Just Docker Compose + ngrok
 ✅ **API Documentation** - Interactive Swagger/ReDoc docs
+✅ **No Firewall Config** - ngrok tunnel works anywhere
+✅ **Automatic HTTPS** - Free SSL certificates via ngrok
 
-Your IMIGO API is now ready to use at `http://localhost:8000`! 🎉
+Your IMIGO API is now accessible from anywhere at your ngrok URL! 🎉
+
+**Get your public URL:** `docker-compose logs ngrok` or visit `http://localhost:4040`
