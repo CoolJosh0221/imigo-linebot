@@ -13,6 +13,9 @@ from linebot.v3.messaging import (
     MarkMessagesAsReadByTokenRequest,
     ReplyMessageRequest,
     TextMessage,
+    QuickReply,
+    QuickReplyItem,
+    MessageAction,
 )
 from linebot.v3.webhooks import (
     MessageEvent,
@@ -24,6 +27,7 @@ from database.database import DatabaseService
 from services.ai_service import AIService
 from services.translation_service import TranslationService
 from services.language_detection import LanguageDetectionService
+from services.intent_service import IntentService, Intent
 from config import load_config, get_config
 
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +37,7 @@ db_service: DatabaseService
 ai_service: AIService
 translation_service: TranslationService
 language_detection_service: LanguageDetectionService
+intent_service: IntentService
 
 line_async_client: AsyncApiClient
 line_messaging_api: AsyncMessagingApi
@@ -49,7 +54,7 @@ app = FastAPI(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_service, ai_service, translation_service, language_detection_service
+    global db_service, ai_service, translation_service, language_detection_service, intent_service
     global line_async_client, line_messaging_api, line_parser
 
     cfg = load_config()
@@ -58,17 +63,18 @@ async def lifespan(app: FastAPI):
     db_service = DatabaseService()
     await db_service.init_db()
 
-    # AI, translation, and language detection
+    # AI, translation, language detection, and intent detection
     ai_service = AIService(db_service, cfg)
     translation_service = TranslationService(cfg)
-    language_detection_service = LanguageDetectionService(default_language=cfg.bot.language)
+    language_detection_service = LanguageDetectionService(default_language=cfg.language)
+    intent_service = IntentService()
 
     line_config = Configuration(access_token=cfg.line_token)
     line_async_client = AsyncApiClient(line_config)
     line_messaging_api = AsyncMessagingApi(line_async_client)
     line_parser = WebhookParser(cfg.line_secret)
 
-    log.info(f"{cfg.bot.name} started ({cfg.bot.language})")
+    log.info(f"{cfg.name} started ({cfg.language})")
 
     try:
         yield
@@ -96,11 +102,12 @@ app.add_middleware(
 )
 
 # Include API routers
-from api.routes import chat, translation, system
+from api.routes import chat, translation, system, rich_menu
 
 app.include_router(chat.router)
 app.include_router(translation.router)
 app.include_router(system.router)
+app.include_router(rich_menu.router)
 
 
 def get_line_api():
@@ -112,9 +119,9 @@ async def root():
     cfg = get_config()
     return {
         "status": "running",
-        "bot": cfg.bot.name,
-        "language": cfg.bot.language,
-        "country": cfg.bot.country,
+        "bot": cfg.name,
+        "language": cfg.language,
+        "country": cfg.country,
     }
 
 
@@ -134,6 +141,102 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
         ),
     )
 
+    # Get user language
+    user_lang = await db_service.get_user_language(user_id) or cfg.language
+
+    # Detect intent
+    intent = intent_service.detect_intent(text)
+    log.info(f"User {user_id[:8]} intent: {intent}")
+
+    # Handle commands
+    if intent == Intent.COMMAND:
+        command, args = intent_service.extract_command(text)
+
+        if command == "lang":
+            if args and cfg.is_valid_language(args):
+                await db_service.set_user_language(user_id, args)
+                log.info(f"User {user_id[:8]} changed language to {args}")
+                await line_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[TextMessage(text=cfg.get_message("language_changed", args))],
+                    )
+                )
+                return
+            else:
+                # Show language selection with quick reply buttons
+                quick_reply = QuickReply(
+                    items=[
+                        QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
+                        QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
+                        QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
+                    ]
+                )
+                await line_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token,
+                        messages=[
+                            TextMessage(
+                                text=cfg.get_message("language_select", user_lang),
+                                quick_reply=quick_reply,
+                            )
+                        ],
+                    )
+                )
+                return
+
+        elif command == "help":
+            await line_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=cfg.get_message("help", user_lang))],
+                )
+            )
+            return
+
+        elif command == "emergency":
+            await line_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=cfg.get_emergency_info())],
+                )
+            )
+            return
+
+        elif command == "clear":
+            await db_service.clear_user_conversation(user_id)
+            await line_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=cfg.get_message("cleared", user_lang))],
+                )
+            )
+            return
+
+    # Handle simple intents with quick responses
+    if not intent_service.should_use_ai(intent):
+        quick_response = intent_service.get_quick_response(intent, user_lang)
+        if quick_response:
+            await line_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=quick_response)],
+                )
+            )
+            return
+
+    # Handle emergency intent
+    if intent == Intent.EMERGENCY:
+        emergency_msg = cfg.get_emergency_info()
+        emergency_msg += f"\n\n{cfg.get_message('help', user_lang)}"
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[TextMessage(text=emergency_msg)],
+            )
+        )
+        return
+
     group_id = getattr(event.source, "group_id", None)
     if group_id:
         group_settings = await db_service.get_group_settings(group_id)
@@ -152,9 +255,8 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
             )
             return
 
-    # Personal chat - use AI service
-    lang = await db_service.get_user_language(user_id)
-    if not lang:
+    # Check if this is a new user (no language set yet)
+    if not await db_service.get_user_language(user_id):
         # Auto-detect language from user's first message
         detected_lang = language_detection_service.detect_language(text)
         log.info(f"New user {user_id[:8]}, detected language: {detected_lang}")
@@ -162,11 +264,12 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=cfg.get_message("welcome"))],
+                messages=[TextMessage(text=cfg.get_message("welcome", detected_lang))],
             )
         )
         return
 
+    # Use AI service for complex queries
     reply = await ai_service.generate_response(user_id, text)
 
     await line_api.reply_message(
@@ -204,18 +307,39 @@ async def handle_postback(event: PostbackEvent) -> None:
         )
 
     elif data == "category_language":
-        lang = await db_service.get_user_language(user_id)
-        messages = {
-            "id": "🌐 Pilih bahasa Anda:\nKetik: /lang id (Indonesia)\n/lang zh (中文)\n/lang en (English)",
-            "zh": "🌐 選擇您的語言：\n輸入: /lang id (印尼文)\n/lang zh (中文)\n/lang en (英文)",
-            "en": "🌐 Choose your language:\nType: /lang id (Indonesian)\n/lang zh (Chinese)\n/lang en (English)",
-        }
+        lang = await db_service.get_user_language(user_id) or cfg.language
+        # Show language selection with quick reply buttons
+        quick_reply = QuickReply(
+            items=[
+                QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
+                QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
+                QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
+            ]
+        )
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=messages.get(lang, messages["en"]))],
+                messages=[
+                    TextMessage(
+                        text=cfg.get_message("language_select", lang),
+                        quick_reply=quick_reply,
+                    )
+                ],
             )
         )
+
+    elif data.startswith("lang_"):
+        # Handle language switching via postback (e.g., from rich menu buttons)
+        lang_code = data.split("_")[1]
+        if cfg.is_valid_language(lang_code):
+            await db_service.set_user_language(user_id, lang_code)
+            log.info(f"User {user_id[:8]} changed language to {lang_code} via postback")
+            await line_api.reply_message(
+                ReplyMessageRequest(
+                    reply_token=event.reply_token,
+                    messages=[TextMessage(text=cfg.get_message("language_changed", lang_code))],
+                )
+            )
 
     else:
         prompts = {

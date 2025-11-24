@@ -36,9 +36,9 @@ async def system_info():
     cfg = get_config()
     return {
         "bot": {
-            "name": cfg.bot.name,
-            "language": cfg.bot.language,
-            "country": cfg.bot.country,
+            "name": cfg.name,
+            "language": cfg.language,
+            "country": cfg.country,
         },
         "version": "1.0.0",
         "timestamp": datetime.utcnow().isoformat(),
