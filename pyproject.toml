@@ -26,6 +26,9 @@ dependencies = [
 
     # Language Detection
     "langdetect>=1.0.9",
+
+    # Image Processing (for rich menu generation)
+    "Pillow>=10.0.0",
 ]
 
 [project.optional-dependencies]
