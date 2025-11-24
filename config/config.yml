@@ -1,9 +1,6 @@
 # Pangolin Self-Host Configuration
 # See https://docs.pangolin.net/self-host/advanced/config-file for all options
 
-# Domain configuration
-domain: ${DOMAIN:-imigo.tw}
-
 # Database settings
 database:
   type: sqlite
@@ -13,6 +10,13 @@ database:
 server:
   port: 3001
   host: 0.0.0.0
+  secret: "CHANGE_THIS_SERVER_SECRET_IN_PRODUCTION"  # Required: Server secret for secure communication
+  dashboard_url: "https://${DOMAIN:-imigo.tw}"  # Required: Dashboard URL
+
+# Domains configuration - at least one domain required
+domains:
+  - name: "${DOMAIN:-imigo.tw}"
+    wildcard: false
 
 # Security settings (change these for production!)
 security:
