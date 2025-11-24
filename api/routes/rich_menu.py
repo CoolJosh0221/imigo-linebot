@@ -10,11 +10,17 @@ router = APIRouter(prefix="/api/richmenu", tags=["Rich Menu"])
 
 class RichMenuSetupRequest(BaseModel):
     set_as_default: bool = True
+    image_path: str = None
 
 
 class LinkRichMenuRequest(BaseModel):
     user_id: str
     rich_menu_id: str
+
+
+class UploadImageRequest(BaseModel):
+    rich_menu_id: str
+    image_path: str
 
 
 @router.post("/setup")
@@ -39,6 +45,12 @@ async def setup_rich_menu(request: RichMenuSetupRequest):
         if not rich_menu_id:
             raise HTTPException(status_code=500, detail="Failed to create rich menu")
 
+        # Upload image if provided
+        if request.image_path:
+            success = await service.upload_rich_menu_image(rich_menu_id, request.image_path)
+            if not success:
+                logger.warning(f"Failed to upload image to rich menu {rich_menu_id}")
+
         # Set as default if requested
         if request.set_as_default:
             success = await service.set_default_rich_menu(rich_menu_id)
@@ -49,10 +61,42 @@ async def setup_rich_menu(request: RichMenuSetupRequest):
             "status": "success",
             "rich_menu_id": rich_menu_id,
             "set_as_default": request.set_as_default,
+            "image_uploaded": bool(request.image_path),
         }
 
     except Exception as e:
         logger.error(f"Rich menu setup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/upload-image")
+async def upload_rich_menu_image(request: UploadImageRequest):
+    """
+    Upload an image to an existing rich menu
+
+    Args:
+        request: Rich menu ID and image path
+
+    Returns:
+        Success status
+    """
+    from main import line_messaging_api
+    from services.rich_menu_service import RichMenuService
+
+    try:
+        service = RichMenuService(line_messaging_api)
+        success = await service.upload_rich_menu_image(request.rich_menu_id, request.image_path)
+
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to upload image")
+
+        return {
+            "status": "success",
+            "rich_menu_id": request.rich_menu_id,
+        }
+
+    except Exception as e:
+        logger.error(f"Upload rich menu image error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
