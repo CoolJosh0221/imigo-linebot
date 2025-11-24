@@ -66,7 +66,7 @@ services:
     container_name: ngrok
     command:
       - "http"
-      - "backend:8000"
+      - "http://backend:8000"
       - "--authtoken=${NGROK_AUTHTOKEN}"
     ports:
       - "4040:4040"  # ngrok web interface
