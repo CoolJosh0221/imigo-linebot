@@ -61,14 +61,14 @@ async def lifespan(app: FastAPI):
     # AI, translation, and language detection
     ai_service = AIService(db_service, cfg)
     translation_service = TranslationService(cfg)
-    language_detection_service = LanguageDetectionService(default_language=cfg.bot.language)
+    language_detection_service = LanguageDetectionService(default_language=cfg.language)
 
     line_config = Configuration(access_token=cfg.line_token)
     line_async_client = AsyncApiClient(line_config)
     line_messaging_api = AsyncMessagingApi(line_async_client)
     line_parser = WebhookParser(cfg.line_secret)
 
-    log.info(f"{cfg.bot.name} started ({cfg.bot.language})")
+    log.info(f"{cfg.name} started ({cfg.language})")
 
     try:
         yield
@@ -112,9 +112,9 @@ async def root():
     cfg = get_config()
     return {
         "status": "running",
-        "bot": cfg.bot.name,
-        "language": cfg.bot.language,
-        "country": cfg.bot.country,
+        "bot": cfg.name,
+        "language": cfg.language,
+        "country": cfg.country,
     }
 
 

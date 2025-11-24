@@ -47,16 +47,16 @@ class AIService:
         return AsyncOpenAI(base_url=base_url, api_key=api_key)
 
     def _get_system_prompt(self) -> str:
-        bot_identity = f"""You are {self.config.bot.name}, a helpful assistant for {self.config.bot.country} migrant workers in Taiwan.
-Your primary language is {self.languages.get(self.config.bot.language, self.config.bot.language)}."""
+        bot_identity = f"""You are {self.config.name}, a helpful assistant for {self.config.country} migrant workers in Taiwan.
+Your primary language is {self.languages.get(self.config.language, self.config.language)}."""
 
         return f"""{bot_identity}
 
 AUDIENCE
-Adult migrant workers from {self.config.bot.country} in Taiwan. Help with healthcare, labor rights, daily life, and translation.
+Adult migrant workers from {self.config.country} in Taiwan. Help with healthcare, labor rights, daily life, and translation.
 
 LANGUAGE
-- Respond ONLY in {self.languages.get(self.config.bot.language)}.
+- Respond ONLY in {self.languages.get(self.config.language)}.
 - Keep it simple. Short sentences. No jargon.
 
 FORMAT

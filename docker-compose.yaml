@@ -17,7 +17,6 @@ services:
       - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-id}
     volumes:
       - ./data:/data
-      - ./config:/app/config:ro
     depends_on:
       vllm:
         condition: service_healthy
