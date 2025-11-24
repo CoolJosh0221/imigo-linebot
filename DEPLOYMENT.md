@@ -1,22 +1,15 @@
 # Deployment Guide for IMIGO API
 
-Simple deployment guide for the IMIGO LINE Bot API with vLLM and ngrok tunnel for internet access.
+Simple deployment guide for the IMIGO LINE Bot API with vLLM and Bore tunnel for internet access.
 
 ## Prerequisites
 
 - Docker and Docker Compose (or Podman) installed
 - NVIDIA GPU with drivers installed (for vLLM)
-- ngrok account (free) - Sign up at https://ngrok.com/
 
 ## Quick Start
 
-### Step 1: Get ngrok Auth Token
-
-1. Sign up at https://dashboard.ngrok.com/signup (free account)
-2. Go to https://dashboard.ngrok.com/get-started/your-authtoken
-3. Copy your authtoken
-
-### Step 2: Set Environment Variables
+### Step 1: Set Environment Variables
 
 Copy `.env.example` to `.env`:
 
@@ -30,9 +23,6 @@ Edit `.env` and fill in your credentials:
 # Bot Configuration
 DEFAULT_LANGUAGE=id
 
-# ngrok Auth Token (required for internet access)
-NGROK_AUTHTOKEN=your_ngrok_authtoken_here
-
 # LINE Bot Credentials
 LINE_CHANNEL_SECRET=your_actual_channel_secret
 LINE_CHANNEL_ACCESS_TOKEN=your_actual_access_token
@@ -41,7 +31,7 @@ LINE_CHANNEL_ACCESS_TOKEN=your_actual_access_token
 GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
-### Step 3: Build and Deploy
+### Step 2: Build and Deploy
 
 Start all services with Docker Compose:
 
@@ -52,30 +42,26 @@ docker-compose up -d
 This will start:
 - **Backend** - FastAPI application (port 8000)
 - **vLLM** - AI model server (port 8001)
-- **ngrok** - Secure tunnel to expose your API to the internet with HTTPS
+- **Bore** - Free tunnel to expose your API to the internet
 
-### Step 4: Get Your Public URL
+### Step 3: Get Your Public URL
 
-Once ngrok starts, get your public HTTPS URL:
+Check the Bore logs to find your public URL:
 
-**Option 1: Check ngrok logs**
 ```bash
-docker-compose logs ngrok
+docker-compose logs bore
 ```
 
 Look for a line like:
 ```
-Forwarding https://abc-123-xyz.ngrok-free.app -> http://backend:8000
+listening at bore.pub:xxxxx
 ```
 
-**Option 2: Visit ngrok web interface**
-```
-http://localhost:4040
-```
+Your API will be accessible at: `http://bore.pub:xxxxx`
 
-The ngrok dashboard will show your public URL and all requests.
+**Note:** Bore uses HTTP (not HTTPS) by default. The port number changes on restart.
 
-### Step 5: Verify Deployment
+### Step 4: Verify Deployment
 
 Check container status:
 
@@ -94,8 +80,8 @@ docker-compose logs -f backend
 # vLLM logs
 docker-compose logs -f vllm
 
-# ngrok tunnel logs
-docker-compose logs -f ngrok
+# Bore tunnel logs
+docker-compose logs -f bore
 ```
 
 Test your API locally:
@@ -107,7 +93,8 @@ curl http://localhost:8000/health
 Test your API via internet:
 
 ```bash
-curl https://your-ngrok-url.ngrok-free.app/health
+# Replace xxxxx with your actual port from bore logs
+curl http://bore.pub:xxxxx/health
 ```
 
 ## API Endpoints
@@ -117,16 +104,15 @@ Your API is available at two URLs:
 **Locally:**
 - `http://localhost:8000`
 
-**Internet (via ngrok):**
-- `https://your-ngrok-url.ngrok-free.app` (check ngrok logs or dashboard for exact URL)
+**Internet (via Bore):**
+- `http://bore.pub:xxxxx` (check bore logs for exact port)
 
 ### Main Endpoints
 
-- **Root**: `https://your-ngrok-url.ngrok-free.app/`
-- **Health Check**: `https://your-ngrok-url.ngrok-free.app/health`
-- **API Documentation**: `https://your-ngrok-url.ngrok-free.app/api/docs`
-- **ReDoc**: `https://your-ngrok-url.ngrok-free.app/api/redoc`
-- **ngrok Dashboard**: `http://localhost:4040`
+- **Root**: `http://bore.pub:xxxxx/`
+- **Health Check**: `http://bore.pub:xxxxx/health`
+- **API Documentation**: `http://bore.pub:xxxxx/api/docs`
+- **ReDoc**: `http://bore.pub:xxxxx/api/redoc`
 
 ### API Routes
 
@@ -153,9 +139,9 @@ Your API is available at two URLs:
 
 ### Chat with the Bot (Auto Language Detection)
 
-**Via ngrok (internet):**
+**Via Bore (internet):**
 ```bash
-curl -X POST https://your-ngrok-url.ngrok-free.app/api/chat/message \
+curl -X POST http://bore.pub:xxxxx/api/chat/message \
   -H "Content-Type: application/json" \
   -d '{
     "user_id": "user123",
@@ -178,7 +164,7 @@ The system will automatically detect that the message is in Indonesian and respo
 ### Translate Text
 
 ```bash
-curl -X POST https://your-ngrok-url.ngrok-free.app/api/translate/ \
+curl -X POST http://bore.pub:xxxxx/api/translate/ \
   -H "Content-Type: application/json" \
   -d '{
     "text": "Hello, how are you?",
@@ -192,53 +178,52 @@ curl -X POST https://your-ngrok-url.ngrok-free.app/api/translate/ \
 Update your LINE Bot webhook URL in the LINE Developers Console:
 
 ```
-https://your-ngrok-url.ngrok-free.app/webhook
+http://bore.pub:xxxxx/webhook
 ```
 
 **Important:**
-- Replace `your-ngrok-url.ngrok-free.app` with your actual ngrok URL
-- Get your ngrok URL from: `docker-compose logs ngrok` or `http://localhost:4040`
-- ngrok provides automatic HTTPS - no manual SSL setup needed!
-- Free ngrok URLs change on restart; for persistent URLs, upgrade to ngrok paid plan
+- Replace `xxxxx` with your actual port from bore logs
+- Get your port from: `docker-compose logs bore`
+- Bore uses HTTP (not HTTPS)
+- Port changes on restart (not persistent)
 
-## ngrok Features
+## Bore Features
 
-### Free Plan
-- ✅ Automatic HTTPS
-- ✅ Random subdomain (e.g., `abc-123.ngrok-free.app`)
+### Characteristics
+- ✅ Completely free
+- ✅ No signup required
+- ✅ Open source (Rust)
 - ✅ Works behind firewalls/NAT
-- ✅ Web dashboard at `http://localhost:4040`
-- ⚠️ URL changes on restart
+- ✅ Very lightweight and fast
+- ⚠️ HTTP only (no automatic HTTPS)
+- ⚠️ Port changes on restart
+- ⚠️ Community-run bore.pub server
 
-### Paid Plan Benefits
-- 🔒 Reserved domains (persistent URL)
-- 🔒 Custom domains (your own domain)
-- 🔒 More bandwidth
-- 🔒 More simultaneous tunnels
-
-### ngrok Dashboard
-
-Visit `http://localhost:4040` to see:
-- Your current public URL
-- Real-time request logs
-- Request/response details
-- Traffic statistics
+### Limitations
+- No HTTPS (uses HTTP)
+- Random port assignment
+- Port changes every restart
+- No web dashboard
+- Less reliable than paid services
 
 ## Troubleshooting
 
-### ngrok Not Starting
+### Bore Not Starting
 
-1. Check if authtoken is set correctly:
+1. Check bore logs:
    ```bash
-   cat .env | grep NGROK_AUTHTOKEN
+   docker-compose logs bore
    ```
 
-2. Check ngrok logs:
+2. Verify backend is running:
    ```bash
-   docker-compose logs ngrok
+   docker-compose ps backend
    ```
 
-3. Verify ngrok account at https://dashboard.ngrok.com/
+3. Restart bore:
+   ```bash
+   docker-compose restart bore
+   ```
 
 ### Backend Not Responding
 
@@ -274,52 +259,37 @@ Visit `http://localhost:4040` to see:
    ls -la models/sealion-model/
    ```
 
-## Production Deployment
+### LINE Webhook Issues
 
-### Option 1: ngrok Paid Plan (Easiest)
-- Upgrade to ngrok paid plan for reserved/custom domains
-- No server configuration needed
-- Automatic HTTPS, DDoS protection, load balancing
-- Perfect for small-to-medium traffic
-
-### Option 2: Traditional VPS Setup
-If you have a server with public IP:
-
-1. **Skip ngrok**: Remove ngrok service from docker-compose.yaml
-
-2. **Reverse Proxy**: Use nginx or Caddy with HTTPS
-   ```nginx
-   server {
-       listen 443 ssl;
-       server_name api.yourdomain.com;
-
-       ssl_certificate /path/to/cert.pem;
-       ssl_certificate_key /path/to/key.pem;
-
-       location / {
-           proxy_pass http://localhost:8000;
-           proxy_set_header Host $host;
-           proxy_set_header X-Real-IP $remote_addr;
-       }
-   }
-   ```
-
-3. **Firewall**: Only expose necessary ports
+1. Ensure the webhook URL in LINE console matches your bore URL
+2. Check that the `/webhook` endpoint is accessible:
    ```bash
-   sudo ufw allow 80/tcp
-   sudo ufw allow 443/tcp
-   sudo ufw enable
+   curl http://bore.pub:xxxxx/webhook
    ```
 
-4. **Monitoring**: Add Prometheus + Grafana for metrics
+3. Verify the port from bore logs is correct
 
-5. **Backups**: Set up automated backups of `data/` directory
+## Production Considerations
 
-6. **Updates**:
-   ```bash
-   docker-compose pull
-   docker-compose up -d
-   ```
+**Important:** Bore is best for development/testing. For production:
+
+### Option 1: Get a VPS with Public IP
+- Use nginx or Caddy with your domain
+- Full HTTPS support
+- Persistent URL
+- More reliable
+
+### Option 2: Paid Tunnel Service
+- ngrok paid plan ($8/month)
+- Persistent URLs and custom domains
+- HTTPS included
+- Better reliability
+
+### Why Bore is Not Ideal for Production:
+- ❌ HTTP only (no HTTPS) - security concern
+- ❌ Port changes on restart - breaks LINE webhooks
+- ❌ Community server (bore.pub) - no SLA
+- ❌ No persistent URLs
 
 ## Stopping the Service
 
@@ -336,9 +306,8 @@ docker-compose down -v
 ## Support and Documentation
 
 For more information:
-- **API Documentation**: https://your-ngrok-url.ngrok-free.app/api/docs
-- **ngrok Dashboard**: http://localhost:4040
-- **ngrok Documentation**: https://ngrok.com/docs
+- **API Documentation**: http://bore.pub:xxxxx/api/docs (replace xxxxx with your port)
+- **Bore GitHub**: https://github.com/ekzhang/bore
 - **FastAPI Documentation**: https://fastapi.tiangolo.com/
 - **vLLM Documentation**: https://docs.vllm.ai/
 - **Container Status**: `docker-compose ps`
@@ -346,16 +315,15 @@ For more information:
 
 ## Features
 
-✅ **Internet Access** - Exposed via ngrok with automatic HTTPS
+✅ **Internet Access** - Exposed via Bore tunnel (free)
 ✅ **Multi-Language Support** - Automatic language detection for 6 languages
 ✅ **AI-Powered Chat** - Powered by SEA-LION-7B via vLLM
 ✅ **LINE Bot Integration** - Ready for LINE Messaging API
 ✅ **Translation Service** - Built-in translation capabilities
-✅ **Simple Deployment** - Just Docker Compose + ngrok
-✅ **API Documentation** - Interactive Swagger/ReDoc docs
-✅ **No Firewall Config** - ngrok tunnel works anywhere
-✅ **Automatic HTTPS** - Free SSL certificates via ngrok
+✅ **Simple Deployment** - Just Docker Compose + Bore
+✅ **No Signup Required** - Bore is completely free and anonymous
+✅ **No Firewall Config** - Bore tunnel works anywhere
 
-Your IMIGO API is now accessible from anywhere at your ngrok URL! 🎉
+Your IMIGO API is now accessible from anywhere via Bore! 🎉
 
-**Get your public URL:** `docker-compose logs ngrok` or visit `http://localhost:4040`
+**Get your public URL:** `docker-compose logs bore` and look for the port number
