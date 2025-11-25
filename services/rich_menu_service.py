@@ -214,12 +214,9 @@ class RichMenuService:
             logger.error(f"Failed to get default rich menu: {e}")
             return None
 
-    async def create_language_rich_menus(self, force_recreate: bool = False) -> Dict[str, str]:
+    async def create_language_rich_menus(self) -> Dict[str, str]:
         """
         Create rich menus for all available languages, or load existing ones
-
-        Args:
-            force_recreate: If True, delete and recreate all menus. If False, reuse existing menus.
 
         Returns:
             Dictionary mapping language codes to rich menu IDs
@@ -235,13 +232,6 @@ class RichMenuService:
         # Get existing rich menus
         existing_menus = await self.get_rich_menu_list()
         existing_menu_map = {menu.name: menu.rich_menu_id for menu in existing_menus}
-
-        # If force recreate, delete all existing menus
-        if force_recreate and existing_menus:
-            logger.info("Force recreate enabled, deleting existing rich menus...")
-            for menu in existing_menus:
-                await self.delete_rich_menu(menu.rich_menu_id)
-            existing_menu_map = {}
 
         for lang in supported_languages:
             menu_name = language_names.get(lang, f"{lang.upper()} Menu")
