@@ -129,6 +129,9 @@ class BotConfig:
         # Database
         self.db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///database.db")
 
+        # Rich Menu Configuration
+        self.rich_menu_force_recreate = os.getenv("RICH_MENU_FORCE_RECREATE", "false").lower() == "true"
+
         # Validate required fields
         if not self.line_secret or not self.line_token:
             raise ValueError(

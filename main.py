@@ -75,9 +75,12 @@ async def lifespan(app: FastAPI):
 
     # Initialize rich menu service and create language-specific menus
     rich_menu_service = RichMenuService(line_messaging_api)
-    log.info("Creating language-specific rich menus...")
-    language_menus = await rich_menu_service.create_language_rich_menus()
-    log.info(f"Created {len(language_menus)} language-specific rich menus: {list(language_menus.keys())}")
+    log.info("Setting up language-specific rich menus...")
+    language_menus = await rich_menu_service.create_language_rich_menus(force_recreate=cfg.rich_menu_force_recreate)
+    if language_menus:
+        log.info(f"Rich menus ready for {len(language_menus)} languages: {list(language_menus.keys())}")
+    else:
+        log.warning("No rich menus were created. Check if menu images exist in rich_menu/ directory.")
 
     log.info(f"{cfg.name} started ({cfg.language})")
 

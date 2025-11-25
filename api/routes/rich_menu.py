@@ -2,6 +2,7 @@
 import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -11,6 +12,10 @@ router = APIRouter(prefix="/api/richmenu", tags=["Rich Menu"])
 class RichMenuSetupRequest(BaseModel):
     set_as_default: bool = True
     image_path: str = None
+
+
+class LanguageMenuSetupRequest(BaseModel):
+    force_recreate: bool = False
 
 
 class LinkRichMenuRequest(BaseModel):
@@ -26,7 +31,7 @@ class UploadImageRequest(BaseModel):
 @router.post("/setup")
 async def setup_rich_menu(request: RichMenuSetupRequest):
     """
-    Create and optionally set as default rich menu
+    Create and optionally set as default rich menu (legacy single-menu setup)
 
     Args:
         request: Setup configuration
@@ -66,6 +71,55 @@ async def setup_rich_menu(request: RichMenuSetupRequest):
 
     except Exception as e:
         logger.error(f"Rich menu setup error: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/setup-language-menus")
+async def setup_language_menus(request: Optional[LanguageMenuSetupRequest] = None):
+    """
+    Create or load language-specific rich menus for all supported languages
+
+    This endpoint sets up rich menus for English, Indonesian, Vietnamese, and Chinese.
+    By default, it reuses existing menus if they exist (fast).
+    Set force_recreate=true to delete and recreate all menus.
+
+    Args:
+        request: Optional configuration (force_recreate flag)
+
+    Returns:
+        Dictionary with created/loaded menu IDs for each language
+    """
+    from main import line_messaging_api, rich_menu_service
+    from services.rich_menu_service import RichMenuService
+
+    try:
+        # Use existing service instance if available, otherwise create new one
+        service = rich_menu_service if 'rich_menu_service' in dir() else RichMenuService(line_messaging_api)
+
+        force_recreate = request.force_recreate if request else False
+
+        logger.info(f"Setting up language-specific rich menus (force_recreate={force_recreate})...")
+        language_menus = await service.create_language_rich_menus(force_recreate=force_recreate)
+
+        if not language_menus:
+            raise HTTPException(
+                status_code=500,
+                detail="No rich menus were created. Check if menu images exist in rich_menu/ directory."
+            )
+
+        return {
+            "status": "success",
+            "language_count": len(language_menus),
+            "languages": list(language_menus.keys()),
+            "menus": {
+                lang: {"rich_menu_id": menu_id}
+                for lang, menu_id in language_menus.items()
+            },
+            "force_recreated": force_recreate,
+        }
+
+    except Exception as e:
+        logger.error(f"Language menu setup error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

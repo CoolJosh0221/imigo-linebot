@@ -214,9 +214,12 @@ class RichMenuService:
             logger.error(f"Failed to get default rich menu: {e}")
             return None
 
-    async def create_language_rich_menus(self) -> Dict[str, str]:
+    async def create_language_rich_menus(self, force_recreate: bool = False) -> Dict[str, str]:
         """
-        Create rich menus for all available languages
+        Create rich menus for all available languages, or load existing ones
+
+        Args:
+            force_recreate: If True, delete and recreate all menus. If False, reuse existing menus.
 
         Returns:
             Dictionary mapping language codes to rich menu IDs
@@ -229,7 +232,27 @@ class RichMenuService:
             "zh": "繁體中文選單"
         }
 
+        # Get existing rich menus
+        existing_menus = await self.get_rich_menu_list()
+        existing_menu_map = {menu.name: menu.rich_menu_id for menu in existing_menus}
+
+        # If force recreate, delete all existing menus
+        if force_recreate and existing_menus:
+            logger.info("Force recreate enabled, deleting existing rich menus...")
+            for menu in existing_menus:
+                await self.delete_rich_menu(menu.rich_menu_id)
+            existing_menu_map = {}
+
         for lang in supported_languages:
+            menu_name = language_names.get(lang, f"{lang.upper()} Menu")
+
+            # Check if menu already exists
+            if menu_name in existing_menu_map:
+                self.language_menus[lang] = existing_menu_map[menu_name]
+                logger.info(f"Reusing existing rich menu for language {lang}: {existing_menu_map[menu_name]}")
+                continue
+
+            # Create new menu if it doesn't exist
             image_path = self.rich_menu_dir / f"menu_{lang}.png"
 
             if not image_path.exists():
@@ -238,7 +261,7 @@ class RichMenuService:
 
             try:
                 # Create rich menu
-                rich_menu_id = await self.create_rich_menu_for_language(lang, language_names.get(lang, f"{lang.upper()} Menu"))
+                rich_menu_id = await self.create_rich_menu_for_language(lang, menu_name)
 
                 if rich_menu_id:
                     # Upload image
@@ -246,7 +269,7 @@ class RichMenuService:
 
                     if success:
                         self.language_menus[lang] = rich_menu_id
-                        logger.info(f"Created rich menu for language {lang}: {rich_menu_id}")
+                        logger.info(f"Created new rich menu for language {lang}: {rich_menu_id}")
                     else:
                         logger.error(f"Failed to upload image for language {lang}")
                         await self.delete_rich_menu(rich_menu_id)
