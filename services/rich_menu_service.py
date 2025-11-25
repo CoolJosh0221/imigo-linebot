@@ -1,7 +1,7 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
 
 from linebot.v3.messaging import (
     AsyncMessagingApi,
@@ -21,6 +21,9 @@ class RichMenuService:
     def __init__(self, line_api: AsyncMessagingApi):
         self.line_api = line_api
         self.config_path = Path(__file__).parent.parent / "rich_menu" / "menu_config.json"
+        self.rich_menu_dir = Path(__file__).parent.parent / "rich_menu"
+        # Store rich menu IDs for each language
+        self.language_menus: Dict[str, str] = {}  # language_code -> rich_menu_id
 
     async def create_rich_menu(self) -> Optional[str]:
         """
@@ -210,3 +213,165 @@ class RichMenuService:
         except Exception as e:
             logger.error(f"Failed to get default rich menu: {e}")
             return None
+
+    async def create_language_rich_menus(self) -> Dict[str, str]:
+        """
+        Create rich menus for all available languages
+
+        Returns:
+            Dictionary mapping language codes to rich menu IDs
+        """
+        supported_languages = ["en", "id", "vi", "zh"]
+        language_names = {
+            "en": "English Menu",
+            "id": "Menu Bahasa Indonesia",
+            "vi": "Thực đơn Tiếng Việt",
+            "zh": "繁體中文選單"
+        }
+
+        for lang in supported_languages:
+            image_path = self.rich_menu_dir / f"menu_{lang}.png"
+
+            if not image_path.exists():
+                logger.warning(f"Image not found for language {lang}: {image_path}")
+                continue
+
+            try:
+                # Create rich menu
+                rich_menu_id = await self.create_rich_menu_for_language(lang, language_names.get(lang, f"{lang.upper()} Menu"))
+
+                if rich_menu_id:
+                    # Upload image
+                    success = await self.upload_rich_menu_image(rich_menu_id, str(image_path))
+
+                    if success:
+                        self.language_menus[lang] = rich_menu_id
+                        logger.info(f"Created rich menu for language {lang}: {rich_menu_id}")
+                    else:
+                        logger.error(f"Failed to upload image for language {lang}")
+                        await self.delete_rich_menu(rich_menu_id)
+
+            except Exception as e:
+                logger.error(f"Failed to create rich menu for language {lang}: {e}")
+
+        return self.language_menus
+
+    async def create_rich_menu_for_language(self, language: str, menu_name: str) -> Optional[str]:
+        """
+        Create a rich menu for a specific language
+
+        Args:
+            language: Language code (en, id, vi, zh)
+            menu_name: Name for the rich menu
+
+        Returns:
+            Rich menu ID if successful, None otherwise
+        """
+        try:
+            # Load config
+            with open(self.config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+
+            # Create rich menu areas
+            areas = []
+            for area_config in config.get("areas", []):
+                bounds = area_config["bounds"]
+                action = area_config["action"]
+
+                # Create action based on type
+                if action["type"] == "postback":
+                    line_action = PostbackAction(
+                        data=action["data"],
+                        displayText=action.get("displayText"),
+                    )
+                else:
+                    logger.warning(f"Unsupported action type: {action['type']}")
+                    continue
+
+                # Create area
+                area = RichMenuArea(
+                    bounds=RichMenuBounds(
+                        x=bounds["x"],
+                        y=bounds["y"],
+                        width=bounds["width"],
+                        height=bounds["height"],
+                    ),
+                    action=line_action,
+                )
+                areas.append(area)
+
+            # Create rich menu request with language-specific name
+            size_config = config["size"]
+            rich_menu_request = RichMenuRequest(
+                size=RichMenuSize(
+                    width=size_config["width"],
+                    height=size_config["height"],
+                ),
+                selected=config.get("selected", True),
+                name=menu_name,
+                chatBarText=config.get("chatBarText", "Tap for Help 點擊求助"),
+                areas=areas,
+            )
+
+            # Create rich menu
+            response = await self.line_api.create_rich_menu(rich_menu_request)
+            rich_menu_id = response.rich_menu_id
+
+            logger.info(f"Rich menu created for {language}: {rich_menu_id}")
+            return rich_menu_id
+
+        except Exception as e:
+            logger.error(f"Failed to create rich menu for language {language}: {e}")
+            return None
+
+    def get_rich_menu_for_language(self, language: str) -> Optional[str]:
+        """
+        Get the rich menu ID for a specific language
+
+        Args:
+            language: Language code (en, id, vi, zh)
+
+        Returns:
+            Rich menu ID if available, None otherwise
+        """
+        return self.language_menus.get(language)
+
+    async def set_user_rich_menu(self, user_id: str, language: str) -> bool:
+        """
+        Set the appropriate rich menu for a user based on their language preference
+
+        Args:
+            user_id: LINE user ID
+            language: User's preferred language code
+
+        Returns:
+            True if successful, False otherwise
+        """
+        rich_menu_id = self.get_rich_menu_for_language(language)
+
+        if not rich_menu_id:
+            logger.warning(f"No rich menu found for language {language}")
+            return False
+
+        return await self.link_rich_menu_to_user(user_id, rich_menu_id)
+
+    async def cleanup_all_rich_menus(self) -> bool:
+        """
+        Delete all rich menus (useful for cleanup/reset)
+
+        Returns:
+            True if all deletions successful, False otherwise
+        """
+        try:
+            menus = await self.get_rich_menu_list()
+
+            for menu in menus:
+                await self.delete_rich_menu(menu.rich_menu_id)
+                logger.info(f"Deleted rich menu: {menu.rich_menu_id}")
+
+            self.language_menus.clear()
+            return True
+
+        except Exception as e:
+            logger.error(f"Failed to cleanup rich menus: {e}")
+            return False

@@ -27,6 +27,7 @@ from database.database import DatabaseService
 from services.ai_service import AIService
 from services.translation_service import TranslationService
 from services.language_detection import LanguageDetectionService
+from services.rich_menu_service import RichMenuService
 from config import load_config, get_config
 
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +37,7 @@ db_service: DatabaseService
 ai_service: AIService
 translation_service: TranslationService
 language_detection_service: LanguageDetectionService
+rich_menu_service: RichMenuService
 
 line_async_client: AsyncApiClient
 line_messaging_api: AsyncMessagingApi
@@ -52,7 +54,7 @@ app = FastAPI(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_service, ai_service, translation_service, language_detection_service
+    global db_service, ai_service, translation_service, language_detection_service, rich_menu_service
     global line_async_client, line_messaging_api, line_parser
 
     cfg = load_config()
@@ -70,6 +72,12 @@ async def lifespan(app: FastAPI):
     line_async_client = AsyncApiClient(line_config)
     line_messaging_api = AsyncMessagingApi(line_async_client)
     line_parser = WebhookParser(cfg.line_secret)
+
+    # Initialize rich menu service and create language-specific menus
+    rich_menu_service = RichMenuService(line_messaging_api)
+    log.info("Creating language-specific rich menus...")
+    language_menus = await rich_menu_service.create_language_rich_menus()
+    log.info(f"Created {len(language_menus)} language-specific rich menus: {list(language_menus.keys())}")
 
     log.info(f"{cfg.name} started ({cfg.language})")
 
@@ -145,6 +153,10 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
         detected_lang = language_detection_service.detect_language(text)
         log.info(f"New user {user_id[:8]}, detected language: {detected_lang}")
         await db_service.set_user_language(user_id, detected_lang)
+
+        # Set appropriate rich menu for user based on detected language
+        await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
+
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
@@ -161,6 +173,10 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
             if cfg.is_valid_language(lang_code):
                 await db_service.set_user_language(user_id, lang_code)
                 log.info(f"User {user_id[:8]} changed language to {lang_code}")
+
+                # Update rich menu for the new language
+                await rich_menu_service.set_user_rich_menu(user_id, lang_code)
+
                 await line_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
@@ -175,6 +191,7 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
                 QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
                 QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
                 QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
+                QuickReplyItem(action=MessageAction(label="🇻🇳 Tiếng Việt", text="/lang vi")),
             ]
         )
         await line_api.reply_message(
@@ -285,6 +302,7 @@ async def handle_postback(event: PostbackEvent) -> None:
                 QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
                 QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
                 QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
+                QuickReplyItem(action=MessageAction(label="🇻🇳 Tiếng Việt", text="/lang vi")),
             ]
         )
         await line_api.reply_message(
@@ -305,6 +323,10 @@ async def handle_postback(event: PostbackEvent) -> None:
         if cfg.is_valid_language(lang_code):
             await db_service.set_user_language(user_id, lang_code)
             log.info(f"User {user_id[:8]} changed language to {lang_code} via postback")
+
+            # Update rich menu for the new language
+            await rich_menu_service.set_user_rich_menu(user_id, lang_code)
+
             await line_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
