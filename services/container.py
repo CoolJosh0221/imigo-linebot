@@ -8,7 +8,7 @@ from linebot.v3.messaging import AsyncMessagingApi, AsyncApiClient, Configuratio
 from linebot.v3.webhook import WebhookParser
 
 from config import Config
-from services.database import DatabaseService
+from database.database import DatabaseService
 from services.ai_service import AIService
 from services.translation_service import TranslationService
 from services.language_detection import LanguageDetectionService
