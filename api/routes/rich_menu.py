@@ -89,13 +89,11 @@ async def setup_language_menus(request: Optional[LanguageMenuSetupRequest] = Non
     Returns:
         Dictionary with created/loaded menu IDs for each language
     """
-    from main import line_messaging_api, rich_menu_service
+    from main import line_messaging_api
     from services.rich_menu_service import RichMenuService
 
     try:
-        # Use existing service instance if available, otherwise create new one
-        service = rich_menu_service if 'rich_menu_service' in dir() else RichMenuService(line_messaging_api)
-
+        service = RichMenuService(line_messaging_api)
         force_recreate = request.force_recreate if request else False
 
         logger.info(f"Setting up language-specific rich menus (force_recreate={force_recreate})...")
