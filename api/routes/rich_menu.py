@@ -3,8 +3,8 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from linebot.v3.messaging import AsyncMessagingApi
 from services.rich_menu_service import RichMenuService
+from services.container import get_container
 
 logger = logging.getLogger(__name__)
 
@@ -26,22 +26,15 @@ class UploadImageRequest(BaseModel):
     image_path: str
 
 
-def get_line_api() -> AsyncMessagingApi:
-    """Get LINE messaging API from app state"""
-    from main import get_line_messaging_api
-    return get_line_messaging_api()
-
-
 def get_rich_menu_svc() -> RichMenuService:
-    """Get rich menu service from app state"""
-    from main import get_rich_menu_service
-    return get_rich_menu_service()
+    """Get rich menu service from service container"""
+    return get_container().rich_menu_service
 
 
 @router.post("/setup")
 async def setup_rich_menu(
     request: RichMenuSetupRequest,
-    line_api: AsyncMessagingApi = Depends(get_line_api)
+    service: RichMenuService = Depends(get_rich_menu_svc)
 ):
     """
     Create and optionally set as default rich menu (legacy single-menu setup)
@@ -53,8 +46,6 @@ async def setup_rich_menu(
         Created rich menu details
     """
     try:
-        service = RichMenuService(line_api)
-
         # Create rich menu
         rich_menu_id = await service.create_rich_menu()
         if not rich_menu_id:
@@ -125,7 +116,7 @@ async def setup_language_menus(
 @router.post("/upload-image")
 async def upload_rich_menu_image(
     request: UploadImageRequest,
-    line_api: AsyncMessagingApi = Depends(get_line_api)
+    service: RichMenuService = Depends(get_rich_menu_svc)
 ):
     """
     Upload an image to an existing rich menu
@@ -137,7 +128,6 @@ async def upload_rich_menu_image(
         Success status
     """
     try:
-        service = RichMenuService(line_api)
         success = await service.upload_rich_menu_image(request.rich_menu_id, request.image_path)
 
         if not success:
@@ -154,7 +144,7 @@ async def upload_rich_menu_image(
 
 
 @router.get("/list")
-async def list_rich_menus(line_api: AsyncMessagingApi = Depends(get_line_api)):
+async def list_rich_menus(service: RichMenuService = Depends(get_rich_menu_svc)):
     """
     Get list of all rich menus
 
@@ -162,7 +152,6 @@ async def list_rich_menus(line_api: AsyncMessagingApi = Depends(get_line_api)):
         List of rich menu objects
     """
     try:
-        service = RichMenuService(line_api)
         menus = await service.get_rich_menu_list()
 
         return {
@@ -185,7 +174,7 @@ async def list_rich_menus(line_api: AsyncMessagingApi = Depends(get_line_api)):
 
 
 @router.get("/default")
-async def get_default_rich_menu(line_api: AsyncMessagingApi = Depends(get_line_api)):
+async def get_default_rich_menu(service: RichMenuService = Depends(get_rich_menu_svc)):
     """
     Get the default rich menu ID
 
@@ -193,7 +182,6 @@ async def get_default_rich_menu(line_api: AsyncMessagingApi = Depends(get_line_a
         Default rich menu ID
     """
     try:
-        service = RichMenuService(line_api)
         rich_menu_id = await service.get_default_rich_menu_id()
 
         if not rich_menu_id:
@@ -212,7 +200,7 @@ async def get_default_rich_menu(line_api: AsyncMessagingApi = Depends(get_line_a
 @router.post("/link")
 async def link_rich_menu(
     request: LinkRichMenuRequest,
-    line_api: AsyncMessagingApi = Depends(get_line_api)
+    service: RichMenuService = Depends(get_rich_menu_svc)
 ):
     """
     Link a rich menu to a specific user
@@ -224,7 +212,6 @@ async def link_rich_menu(
         Success status
     """
     try:
-        service = RichMenuService(line_api)
         success = await service.link_rich_menu_to_user(
             request.user_id, request.rich_menu_id
         )
@@ -246,7 +233,7 @@ async def link_rich_menu(
 @router.delete("/unlink/{user_id}")
 async def unlink_rich_menu(
     user_id: str,
-    line_api: AsyncMessagingApi = Depends(get_line_api)
+    service: RichMenuService = Depends(get_rich_menu_svc)
 ):
     """
     Unlink rich menu from a user
@@ -258,7 +245,6 @@ async def unlink_rich_menu(
         Success status
     """
     try:
-        service = RichMenuService(line_api)
         success = await service.unlink_rich_menu_from_user(user_id)
 
         if not success:
@@ -274,7 +260,7 @@ async def unlink_rich_menu(
 @router.delete("/{rich_menu_id}")
 async def delete_rich_menu(
     rich_menu_id: str,
-    line_api: AsyncMessagingApi = Depends(get_line_api)
+    service: RichMenuService = Depends(get_rich_menu_svc)
 ):
     """
     Delete a rich menu
@@ -286,7 +272,6 @@ async def delete_rich_menu(
         Success status
     """
     try:
-        service = RichMenuService(line_api)
         success = await service.delete_rich_menu(rich_menu_id)
 
         if not success:
