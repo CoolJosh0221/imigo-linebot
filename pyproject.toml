@@ -8,24 +8,20 @@ dependencies = [
     "fastapi>=0.116.1",
     "uvicorn[standard]>=0.35.0",
     "python-dotenv>=1.1.1",
-
     # LINE Bot SDK
     "line-bot-sdk>=3.19.0",
-
     # Database
     "aiosqlite>=0.21.0",
     "sqlalchemy>=2.0.43",
     "greenlet>=3.2.4",
-
     # LLM Client (OpenAI-compatible API for vLLM)
     "openai>=2.3.0",
-
     # Utilities
     "pyyaml>=6.0.3",
     "attrs>=23.0.0",
-
     # Language Detection
     "langdetect>=1.0.9",
+    "pillow>=12.0.0",
 ]
 
 [project.optional-dependencies]
