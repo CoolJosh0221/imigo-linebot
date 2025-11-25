@@ -33,16 +33,6 @@ from config import load_config, get_config
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-db_service: DatabaseService
-ai_service: AIService
-translation_service: TranslationService
-language_detection_service: LanguageDetectionService
-rich_menu_service: RichMenuService
-
-line_async_client: AsyncApiClient
-line_messaging_api: AsyncMessagingApi
-line_parser: WebhookParser
-
 app = FastAPI(
     title="IMIGO - Indonesian Migrant Worker Assistant",
     description="AI-powered LINE bot and API for Indonesian migrant workers in Taiwan",
@@ -52,32 +42,69 @@ app = FastAPI(
 )
 
 
+# Dependency injection functions
+def get_db_service() -> DatabaseService:
+    """Get database service from app state"""
+    return app.state.db_service
+
+
+def get_line_messaging_api() -> AsyncMessagingApi:
+    """Get LINE messaging API from app state"""
+    return app.state.line_messaging_api
+
+
+def get_line_parser() -> WebhookParser:
+    """Get LINE webhook parser from app state"""
+    return app.state.line_parser
+
+
+def get_rich_menu_service() -> RichMenuService:
+    """Get rich menu service from app state"""
+    return app.state.rich_menu_service
+
+
+def get_ai_service() -> AIService:
+    """Get AI service from app state"""
+    return app.state.ai_service
+
+
+def get_translation_service() -> TranslationService:
+    """Get translation service from app state"""
+    return app.state.translation_service
+
+
+def get_language_detection_service() -> LanguageDetectionService:
+    """Get language detection service from app state"""
+    return app.state.language_detection_service
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_service, ai_service, translation_service, language_detection_service, rich_menu_service
-    global line_async_client, line_messaging_api, line_parser
-
     cfg = load_config()
 
-    # database
-    db_service = DatabaseService()
-    await db_service.init_db()
+    # Initialize services and store in app.state
+    app.state.db_service = DatabaseService()
+    await app.state.db_service.init_db()
 
     # AI, translation, and language detection
-    ai_service = AIService(db_service, cfg)
-    translation_service = TranslationService(cfg)
-    language_detection_service = LanguageDetectionService(default_language=cfg.language)
+    app.state.ai_service = AIService(app.state.db_service, cfg)
+    app.state.translation_service = TranslationService(cfg)
+    app.state.language_detection_service = LanguageDetectionService(default_language=cfg.language)
 
+    # LINE API setup
     line_config = Configuration(access_token=cfg.line_token)
     line_async_client = AsyncApiClient(line_config)
-    line_messaging_api = AsyncMessagingApi(line_async_client)
-    line_parser = WebhookParser(cfg.line_secret)
+    app.state.line_messaging_api = AsyncMessagingApi(line_async_client)
+    app.state.line_parser = WebhookParser(cfg.line_secret)
 
     # Initialize rich menu service and create language-specific menus
-    rich_menu_service = RichMenuService(line_messaging_api)
-    log.info("Creating language-specific rich menus...")
-    language_menus = await rich_menu_service.create_language_rich_menus()
-    log.info(f"Created {len(language_menus)} language-specific rich menus: {list(language_menus.keys())}")
+    app.state.rich_menu_service = RichMenuService(app.state.line_messaging_api)
+    log.info("Setting up language-specific rich menus...")
+    language_menus = await app.state.rich_menu_service.create_language_rich_menus()
+    if language_menus:
+        log.info(f"Rich menus ready for {len(language_menus)} languages: {list(language_menus.keys())}")
+    else:
+        log.warning("No rich menus were created. Check if menu images exist in rich_menu/ directory.")
 
     log.info(f"{cfg.name} started ({cfg.language})")
 
@@ -85,13 +112,13 @@ async def lifespan(app: FastAPI):
         yield
     finally:
         # close AI client
-        await ai_service.aclose()
+        await app.state.ai_service.aclose()
 
         # close LINE async client
         await line_async_client.close()
 
         # close DB
-        await db_service.dispose()
+        await app.state.db_service.dispose()
         log.info("Services closed")
 
 
@@ -115,10 +142,6 @@ app.include_router(system.router)
 app.include_router(rich_menu.router)
 
 
-def get_line_api():
-    return line_messaging_api, line_parser
-
-
 @app.get("/")
 async def root():
     cfg = get_config()
@@ -137,7 +160,12 @@ async def health():
 
 async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
     cfg = get_config()
-    line_api, _ = get_line_api()
+    line_api = app.state.line_messaging_api
+    db_service = app.state.db_service
+    ai_service = app.state.ai_service
+    translation_service = app.state.translation_service
+    language_detection_service = app.state.language_detection_service
+    rich_menu_service = app.state.rich_menu_service
 
     # Mark message as read
     await line_api.mark_messages_as_read_by_token(
@@ -267,7 +295,10 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 
 async def handle_postback(event: PostbackEvent) -> None:
     cfg = get_config()
-    line_api, _ = get_line_api()
+    line_api = app.state.line_messaging_api
+    db_service = app.state.db_service
+    ai_service = app.state.ai_service
+    rich_menu_service = app.state.rich_menu_service
 
     user_id = event.source.user_id
     data = event.postback.data
@@ -365,7 +396,7 @@ async def handle_message(event: MessageEvent) -> None:
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    _, parser = get_line_api()
+    parser = app.state.line_parser
 
     signature = request.headers.get("X-Line-Signature", "")
     body = (await request.body()).decode()
