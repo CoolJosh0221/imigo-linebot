@@ -1,7 +1,9 @@
 """Translation service for group chat messages"""
 import logging
+import os
 from openai import AsyncOpenAI
 from config import BotConfig
+from exceptions import TranslationError, ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -23,18 +25,20 @@ class TranslationService:
         }
 
     def _init_client(self) -> AsyncOpenAI:
-        """Initialize OpenAI-compatible client for LLM"""
-        import os
+        """Initialize OpenAI-compatible client for LLM with proper error handling"""
+        try:
+            base_url = os.getenv("LLM_BASE_URL")
+            api_key = os.getenv("LLM_API_KEY", "dummy-key")
 
-        base_url = os.getenv("LLM_BASE_URL")
-        api_key = os.getenv("LLM_API_KEY", "dummy-key")
+            if not base_url:
+                if api_key == "dummy-key":
+                    raise ConfigurationError("LLM_API_KEY required when using OpenAI")
+                return AsyncOpenAI(api_key=api_key)
 
-        if not base_url:
-            if api_key == "dummy-key":
-                raise ValueError("LLM_API_KEY required when using OpenAI")
-            return AsyncOpenAI(api_key=api_key)
-
-        return AsyncOpenAI(base_url=base_url, api_key=api_key)
+            return AsyncOpenAI(base_url=base_url, api_key=api_key)
+        except Exception as e:
+            logger.error(f"Failed to initialize translation client: {e}")
+            raise TranslationError(f"Failed to initialize translation client: {e}") from e
 
     async def translate_message(
         self, text: str, target_language: str, source_language: str = "auto"
@@ -82,7 +86,7 @@ Only output the translated text, nothing else. Keep the tone and style natural."
 
         except Exception as e:
             logger.error(f"Translation error: {e}")
-            return f"[Translation error: {str(e)}]"
+            raise TranslationError(f"Failed to translate text: {e}") from e
 
     def format_translation_message(
         self, original_text: str, translated_text: str, target_language: str

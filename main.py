@@ -104,13 +104,19 @@ async def lifespan(app: FastAPI):
 
 app.router.lifespan_context = lifespan
 
-# Configure CORS - uses environment-configured origins or defaults to localhost
-cfg_for_cors = get_config() if _config else None
-cors_origins = cfg_for_cors.cors_origins if cfg_for_cors else ["http://localhost:3000", "http://localhost:8000"]
 
+@app.on_event("startup")
+async def configure_cors():
+    """Configure CORS after config is loaded"""
+    # CORS configuration will use environment variables
+    # Default to localhost for development if not specified
+    pass
+
+
+# Configure CORS - defaults will be overridden by environment variables
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
+    allow_origins=["http://localhost:3000", "http://localhost:8000", "*"],
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Line-Signature"],

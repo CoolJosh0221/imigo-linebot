@@ -1,3 +1,4 @@
+"""Rich menu service for managing LINE rich menus"""
 import json
 import logging
 from pathlib import Path
@@ -12,6 +13,8 @@ from linebot.v3.messaging import (
     RichMenuBounds,
     PostbackAction,
 )
+
+from exceptions import RichMenuError, ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -63,15 +66,21 @@ class RichMenuService:
 
         return path
 
-    async def create_rich_menu(self) -> Optional[str]:
+    async def create_rich_menu(self) -> str:
         """
         Create a rich menu from the config file
 
         Returns:
-            Rich menu ID if successful, None otherwise
+            Rich menu ID if successful
+
+        Raises:
+            RichMenuError: If menu creation fails
         """
         try:
             # Load config
+            if not self.config_path.exists():
+                raise RichMenuError(f"Config file not found: {self.config_path}")
+
             with open(self.config_path, "r", encoding="utf-8") as f:
                 config = json.load(f)
 
@@ -103,6 +112,9 @@ class RichMenuService:
                 )
                 areas.append(area)
 
+            if not areas:
+                raise RichMenuError("No valid areas defined in config")
+
             # Create rich menu request
             size_config = config["size"]
             rich_menu_request = RichMenuRequest(
@@ -123,9 +135,11 @@ class RichMenuService:
             logger.info(f"Rich menu created: {rich_menu_id}")
             return rich_menu_id
 
+        except RichMenuError:
+            raise
         except Exception as e:
-            logger.error(f"Failed to create rich menu: {e}")
-            return None
+            logger.error(f"Failed to create rich menu: {e}", exc_info=True)
+            raise RichMenuError(f"Failed to create rich menu: {e}") from e
 
     async def upload_rich_menu_image(self, rich_menu_id: str, image_path: str) -> bool:
         """
