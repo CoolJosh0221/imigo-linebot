@@ -2,6 +2,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Optional, Dict
+import os
 
 from linebot.v3.messaging import (
     AsyncMessagingApi,
@@ -24,6 +25,43 @@ class RichMenuService:
         self.rich_menu_dir = Path(__file__).parent.parent / "rich_menu"
         # Store rich menu IDs for each language
         self.language_menus: Dict[str, str] = {}  # language_code -> rich_menu_id
+
+    def _validate_image_path(self, image_path: str) -> Path:
+        """
+        Validate and sanitize image path to prevent path traversal attacks
+
+        Args:
+            image_path: Path to validate
+
+        Returns:
+            Validated Path object
+
+        Raises:
+            ValueError: If path is invalid or outside allowed directory
+        """
+        # Convert to Path object
+        path = Path(image_path).resolve()
+
+        # Ensure the path exists and is a file
+        if not path.exists():
+            raise ValueError(f"Image file does not exist: {image_path}")
+
+        if not path.is_file():
+            raise ValueError(f"Path is not a file: {image_path}")
+
+        # Ensure the path is within the rich_menu directory
+        rich_menu_dir_resolved = self.rich_menu_dir.resolve()
+        try:
+            path.relative_to(rich_menu_dir_resolved)
+        except ValueError:
+            raise ValueError(f"Image path must be within the rich_menu directory: {image_path}")
+
+        # Validate file extension
+        allowed_extensions = {'.png', '.jpg', '.jpeg'}
+        if path.suffix.lower() not in allowed_extensions:
+            raise ValueError(f"Invalid image format. Allowed: {allowed_extensions}")
+
+        return path
 
     async def create_rich_menu(self) -> Optional[str]:
         """
@@ -101,14 +139,25 @@ class RichMenuService:
             True if successful, False otherwise
         """
         try:
-            with open(image_path, "rb") as f:
+            # Validate the image path
+            validated_path = self._validate_image_path(image_path)
+
+            # Determine content type from extension
+            content_type = "image/png"
+            if validated_path.suffix.lower() in {'.jpg', '.jpeg'}:
+                content_type = "image/jpeg"
+
+            with open(validated_path, "rb") as f:
                 await self.line_api.set_rich_menu_image(
                     rich_menu_id=rich_menu_id,
                     body=f.read(),
-                    _headers={"Content-Type": "image/png"},
+                    _headers={"Content-Type": content_type},
                 )
             logger.info(f"Uploaded image to rich menu: {rich_menu_id}")
             return True
+        except ValueError as e:
+            logger.error(f"Invalid image path: {e}")
+            return False
         except Exception as e:
             logger.error(f"Failed to upload rich menu image: {e}")
             return False

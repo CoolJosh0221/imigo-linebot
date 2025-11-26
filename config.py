@@ -76,7 +76,7 @@ I can help with:
 Please ask me anything!""",
         "cleared": "✅ Chat history has been cleared.\nYou can start a new conversation!",
         "language_changed": "✅ Language changed to English.\nI will now respond in English!",
-        "language_select": "🌐 Choose your language:\nType: /lang id (Indonesian)\n/lang zh (Chinese)\n/lang en (English)",
+        "language_select": "🌐 Choose your language:\nType: /lang id (Indonesian)\n/lang zh (Chinese)\n/lang en (English)\n/lang vi (Vietnamese)",
         "help": """🤖 How to use IMIGO:
 
 Type your question in any language, and I'll help you!
@@ -89,6 +89,34 @@ Help categories:
 • 🏠 Daily life
 • 🚨 Emergency contacts""",
     },
+    "vi": {
+        "welcome": """👋 Chào mừng đến với IMIGO!
+
+Tôi là trợ lý AI giúp đỡ lao động nhập cư tại Đài Loan.
+
+Tôi có thể giúp với:
+• Thông tin lao động
+• Dịch vụ chính phủ
+• Dịch thuật ngôn ngữ
+• Thông tin y tế
+• Cuộc sống hàng ngày
+
+Hãy hỏi tôi bất cứ điều gì!""",
+        "cleared": "✅ Lịch sử trò chuyện đã được xóa.\nBạn có thể bắt đầu cuộc trò chuyện mới!",
+        "language_changed": "✅ Đã đổi sang Tiếng Việt.\nTôi sẽ trả lời bằng Tiếng Việt!",
+        "language_select": "🌐 Chọn ngôn ngữ của bạn:\nNhập: /lang id (Tiếng Indonesia)\n/lang zh (Tiếng Trung)\n/lang en (Tiếng Anh)\n/lang vi (Tiếng Việt)",
+        "help": """🤖 Cách sử dụng IMIGO:
+
+Nhập câu hỏi của bạn bằng bất kỳ ngôn ngữ nào, tôi sẽ giúp bạn!
+
+Các loại hỗ trợ:
+• 💼 Vấn đề công việc
+• 🏛️ Dịch vụ chính phủ
+• 🏥 Thông tin y tế
+• 🌐 Hỗ trợ dịch thuật
+• 🏠 Cuộc sống hàng ngày
+• 🚨 Liên hệ khẩn cấp""",
+    },
 }
 
 # Supported languages
@@ -96,6 +124,7 @@ SUPPORTED_LANGUAGES = {
     "id": "Bahasa Indonesia",
     "zh": "繁體中文",
     "en": "English",
+    "vi": "Tiếng Việt",
 }
 
 # Emergency contacts for Taiwan
@@ -128,6 +157,14 @@ class BotConfig:
 
         # Database
         self.db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///database.db")
+
+        # CORS settings
+        cors_origins = os.getenv("CORS_ORIGINS", "")
+        if cors_origins:
+            self.cors_origins = [origin.strip() for origin in cors_origins.split(",")]
+        else:
+            # Default to localhost only for development
+            self.cors_origins = ["http://localhost:3000", "http://localhost:8000"]
 
         # Validate required fields
         if not self.line_secret or not self.line_token:
