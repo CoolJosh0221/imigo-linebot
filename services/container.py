@@ -7,7 +7,7 @@ from typing import Optional
 from linebot.v3.messaging import AsyncMessagingApi, AsyncApiClient, Configuration
 from linebot.v3.webhook import WebhookParser
 
-from config import Config
+from config import BotConfig
 from database.database import DatabaseService
 from services.ai_service import AIService
 from services.translation_service import TranslationService
@@ -31,7 +31,7 @@ class ServiceContainer:
         self._line_async_client: Optional[AsyncApiClient] = None
         self._initialized = False
 
-    async def initialize(self, config: Config):
+    async def initialize(self, config: BotConfig):
         """
         Initialize all services with the given configuration
 
@@ -116,7 +116,7 @@ def get_container() -> ServiceContainer:
     return _container
 
 
-async def initialize_services(config: Config) -> ServiceContainer:
+async def initialize_services(config: BotConfig) -> ServiceContainer:
     """
     Initialize all services with the given configuration
 

@@ -82,14 +82,14 @@ class DatabaseService:
                 s.add(UserPreferences(user_id=user_id, language=language))
         log.info("Set language=%s for user %s", language, user_id[:8])
 
-    async def get_user_language(self, user_id: str) -> str:
+    async def get_user_language(self, user_id: str) -> Optional[str]:
         async with self.Session() as s:
             lang: Optional[str] = await s.scalar(
                 select(UserPreferences.language).where(
                     UserPreferences.user_id == user_id
                 )
             )
-        return lang or "en"
+        return lang
 
     # Group translation methods
     async def enable_group_translation(

@@ -104,13 +104,16 @@ async def lifespan(app: FastAPI):
 
 app.router.lifespan_context = lifespan
 
-# Configure CORS for public API access
+# Configure CORS - uses environment-configured origins or defaults to localhost
+cfg_for_cors = get_config() if _config else None
+cors_origins = cfg_for_cors.cors_origins if cfg_for_cors else ["http://localhost:3000", "http://localhost:8000"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with specific origins
+    allow_origins=cors_origins,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Line-Signature"],
 )
 
 # Include API routers
