@@ -385,7 +385,7 @@ class RichMenuService:
                 ),
                 selected=config.get("selected", True),
                 name=menu_name,
-                chatBarText=config.get("chatBarText", "Tap for Help 點擊求助"),
+                chatBarText=config.get("chatBarText", "Tap for Help"),
                 areas=areas,
             )
 
