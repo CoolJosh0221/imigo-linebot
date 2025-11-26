@@ -1,6 +1,8 @@
+"""Configuration management for IMIGO LINE Bot"""
 import os
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 from dotenv import load_dotenv
+from exceptions import ConfigurationError
 
 
 # Language-specific messages
@@ -139,38 +141,86 @@ EMERGENCY_CONTACTS = {
 
 
 class BotConfig:
+    """Configuration class for IMIGO LINE Bot"""
+
     def __init__(self):
         load_dotenv()
 
         # Bot identity
-        self.language = os.getenv("DEFAULT_LANGUAGE", "id")
+        self.language = self._get_env_with_default("DEFAULT_LANGUAGE", "id")
         self.name = "IMIGO"
         self.country = "tw"
+
+        # Validate language
+        if not self.is_valid_language(self.language):
+            raise ConfigurationError(
+                f"Invalid DEFAULT_LANGUAGE: {self.language}. "
+                f"Must be one of: {', '.join(SUPPORTED_LANGUAGES.keys())}"
+            )
 
         # LINE credentials
         self.line_secret = os.getenv("LINE_CHANNEL_SECRET")
         self.line_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 
         # LLM configuration
-        self.llm_base_url = os.getenv("LLM_BASE_URL", "http://localhost:8000/v1")
-        self.model_name = os.getenv("MODEL_NAME", "aisingapore/sealion7b-instruct")
+        self.llm_base_url = self._get_env_with_default(
+            "LLM_BASE_URL", "http://localhost:8000/v1"
+        )
+        self.model_name = self._get_env_with_default(
+            "MODEL_NAME", "aisingapore/sealion7b-instruct"
+        )
 
         # Database
-        self.db_url = os.getenv("DATABASE_URL", "sqlite+aiosqlite:///database.db")
+        self.db_url = self._get_env_with_default(
+            "DATABASE_URL", "sqlite+aiosqlite:///database.db"
+        )
 
         # CORS settings
-        cors_origins = os.getenv("CORS_ORIGINS", "")
-        if cors_origins:
-            self.cors_origins = [origin.strip() for origin in cors_origins.split(",")]
-        else:
-            # Default to localhost only for development
-            self.cors_origins = ["http://localhost:3000", "http://localhost:8000"]
+        self.cors_origins = self._parse_cors_origins()
 
         # Validate required fields
+        self._validate_config()
+
+    def _get_env_with_default(self, key: str, default: str) -> str:
+        """Get environment variable with default value"""
+        return os.getenv(key, default).strip()
+
+    def _parse_cors_origins(self) -> List[str]:
+        """Parse CORS origins from environment"""
+        cors_origins = os.getenv("CORS_ORIGINS", "")
+        if cors_origins:
+            origins = [origin.strip() for origin in cors_origins.split(",")]
+            # Validate origins
+            for origin in origins:
+                if origin and not self._is_valid_origin(origin):
+                    raise ConfigurationError(
+                        f"Invalid CORS origin: {origin}. "
+                        "Must be a valid URL or '*' for all origins."
+                    )
+            return origins
+        # Default to localhost only for development
+        return ["http://localhost:3000", "http://localhost:8000"]
+
+    def _is_valid_origin(self, origin: str) -> bool:
+        """Validate CORS origin format"""
+        if origin == "*":
+            return True
+        # Basic URL validation
+        return origin.startswith("http://") or origin.startswith("https://")
+
+    def _validate_config(self):
+        """Validate required configuration"""
         if not self.line_secret or not self.line_token:
-            raise ValueError(
-                "LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN must be set in environment variables"
+            raise ConfigurationError(
+                "LINE_CHANNEL_SECRET and LINE_CHANNEL_ACCESS_TOKEN "
+                "must be set in environment variables"
             )
+
+        if not self.llm_base_url:
+            raise ConfigurationError("LLM_BASE_URL must be set")
+
+        if not self.model_name:
+            raise ConfigurationError("MODEL_NAME must be set")
 
     def get_message(self, key: str, language: str = None) -> str:
         """Get a message in the specified language (or bot's default language)"""

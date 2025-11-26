@@ -1,9 +1,11 @@
+"""AI service for generating responses using LLM"""
 import os
 import logging
 import re
 from openai import AsyncOpenAI
 from database.database import DatabaseService
 from config import BotConfig
+from exceptions import AIServiceError, ConfigurationError
 
 logger = logging.getLogger(__name__)
 
@@ -36,15 +38,20 @@ class AIService:
         }
 
     def _init_client(self) -> AsyncOpenAI:
-        base_url = os.getenv("LLM_BASE_URL")
-        api_key = os.getenv("LLM_API_KEY", "dummy-key")
+        """Initialize OpenAI client with proper error handling"""
+        try:
+            base_url = os.getenv("LLM_BASE_URL")
+            api_key = os.getenv("LLM_API_KEY", "dummy-key")
 
-        if not base_url:
-            if api_key == "dummy-key":
-                raise ValueError("LLM_API_KEY required when using OpenAI")
-            return AsyncOpenAI(api_key=api_key)
+            if not base_url:
+                if api_key == "dummy-key":
+                    raise ConfigurationError("LLM_API_KEY required when using OpenAI")
+                return AsyncOpenAI(api_key=api_key)
 
-        return AsyncOpenAI(base_url=base_url, api_key=api_key)
+            return AsyncOpenAI(base_url=base_url, api_key=api_key)
+        except Exception as e:
+            logger.error(f"Failed to initialize AI client: {e}")
+            raise AIServiceError(f"Failed to initialize AI client: {e}") from e
 
     def _get_system_prompt(self) -> str:
         bot_identity = f"""You are {self.config.name}, a helpful assistant for {self.config.country} migrant workers in Taiwan.
@@ -89,35 +96,55 @@ IMPORTANT:
         await self.client.close()
 
     async def generate_response(self, user_id: str, message: str) -> str:
-        user_language = await self.db_service.get_user_language(user_id)
-        history = await self.db_service.get_conversation_history(user_id=user_id, limit=10)
+        """
+        Generate AI response for user message
 
-        messages = [{"role": "system", "content": self._get_system_prompt()}]
+        Args:
+            user_id: User ID
+            message: User message
 
-        for msg in history:
-            messages.append({"role": msg["role"], "content": msg["content"]})
+        Returns:
+            AI generated response
 
-        language_name = self.languages.get(user_language, "English")
-        messages.append(
-            {"role": "user", "content": f"[Respond in {language_name}]\n\n{message}"}
-        )
+        Raises:
+            AIServiceError: If AI generation fails
+        """
+        try:
+            user_language = await self.db_service.get_user_language(user_id)
+            history = await self.db_service.get_conversation_history(
+                user_id=user_id, limit=10
+            )
 
-        response = await self.client.chat.completions.create(
-            model=self.model_name,
-            messages=messages,
-            temperature=0.7,
-            max_tokens=1000,
-        )
+            messages = [{"role": "system", "content": self._get_system_prompt()}]
 
-        ai_response = response.choices[0].message.content.strip()
-        cleaned_ai_response = re.sub(r"^[\s\S]*?<\/think>\s*", '', ai_response)
-        cleaned_ai_response = strip_markdown_formatting(cleaned_ai_response)
+            for msg in history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
 
-        await self.db_service.save_message(user_id, "user", message)
-        await self.db_service.save_message(user_id, "assistant", cleaned_ai_response)
+            language_name = self.languages.get(user_language, "English")
+            messages.append(
+                {"role": "user", "content": f"[Respond in {language_name}]\n\n{message}"}
+            )
 
-        logger.info(f"Response for user {user_id[:8]}... in {user_language}")
-        return cleaned_ai_response
+            response = await self.client.chat.completions.create(
+                model=self.model_name,
+                messages=messages,
+                temperature=0.7,
+                max_tokens=1000,
+            )
+
+            ai_response = response.choices[0].message.content.strip()
+            cleaned_ai_response = re.sub(r"^[\s\S]*?<\/think>\s*", "", ai_response)
+            cleaned_ai_response = strip_markdown_formatting(cleaned_ai_response)
+
+            await self.db_service.save_message(user_id, "user", message)
+            await self.db_service.save_message(user_id, "assistant", cleaned_ai_response)
+
+            logger.info(f"Response for user {user_id[:8]}... in {user_language}")
+            return cleaned_ai_response
+
+        except Exception as e:
+            logger.error(f"Failed to generate response for user {user_id[:8]}: {e}")
+            raise AIServiceError(f"Failed to generate AI response: {e}") from e
 
     async def clear_conversation(self, user_id: str):
         await self.db_service.clear_user_conversation(user_id)
