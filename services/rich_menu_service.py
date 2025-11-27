@@ -14,6 +14,7 @@ from linebot.v3.messaging import (
     PostbackAction,
 )
 
+from config import BotConfig
 from exceptions import RichMenuError, ValidationError
 
 logger = logging.getLogger(__name__)
@@ -376,7 +377,10 @@ class RichMenuService:
                 )
                 areas.append(area)
 
-            # Create rich menu request with language-specific name
+            # Get language-specific chat bar text
+            chat_bar_text = BotConfig.get_chat_bar_text(language)
+
+            # Create rich menu request with language-specific name and chatBarText
             size_config = config["size"]
             rich_menu_request = RichMenuRequest(
                 size=RichMenuSize(
@@ -385,7 +389,7 @@ class RichMenuService:
                 ),
                 selected=config.get("selected", True),
                 name=menu_name,
-                chatBarText=config.get("chatBarText", "Tap for Help"),
+                chatBarText=chat_bar_text,  # Use language-specific text
                 areas=areas,
             )
 
@@ -393,7 +397,7 @@ class RichMenuService:
             response = await self.line_api.create_rich_menu(rich_menu_request)
             rich_menu_id = response.rich_menu_id
 
-            logger.info(f"Rich menu created for {language}: {rich_menu_id}")
+            logger.info(f"Rich menu created for {language}: {rich_menu_id} with chatBarText: {chat_bar_text}")
             return rich_menu_id
 
         except Exception as e:

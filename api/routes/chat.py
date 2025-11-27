@@ -1,8 +1,14 @@
 """Chat API endpoints for direct interaction with the bot"""
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
+
+from dependencies import (
+    get_ai_service,
+    get_database_service,
+    get_language_detection_service,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +33,12 @@ class ClearChatRequest(BaseModel):
 
 
 @router.post("/message", response_model=ChatResponse)
-async def send_message(request: ChatRequest):
+async def send_message(
+    request: ChatRequest,
+    ai_service = Depends(get_ai_service),
+    db_service = Depends(get_database_service),
+    language_detection_service = Depends(get_language_detection_service)
+):
     """
     Send a message to the bot and get a response
 
@@ -38,8 +49,6 @@ async def send_message(request: ChatRequest):
     Returns:
         ChatResponse with the bot's reply and detected/used language
     """
-    from main import ai_service, db_service, language_detection_service
-
     try:
         # Detect language if set to "auto" or not provided
         detected_language = request.language
@@ -63,12 +72,15 @@ async def send_message(request: ChatRequest):
             language=detected_language,
         )
     except Exception as e:
-        logger.error(f"Chat error: {e}")
+        logger.error(f"Chat error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.post("/clear")
-async def clear_conversation(request: ClearChatRequest):
+async def clear_conversation(
+    request: ClearChatRequest,
+    db_service = Depends(get_database_service)
+):
     """
     Clear conversation history for a user
 
@@ -78,18 +90,20 @@ async def clear_conversation(request: ClearChatRequest):
     Returns:
         Success message
     """
-    from main import db_service
-
     try:
         await db_service.clear_user_conversation(request.user_id)
         return {"status": "success", "message": "Conversation cleared"}
     except Exception as e:
-        logger.error(f"Clear conversation error: {e}")
+        logger.error(f"Clear conversation error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/history/{user_id}")
-async def get_conversation_history(user_id: str, limit: int = 10):
+async def get_conversation_history(
+    user_id: str,
+    limit: int = 10,
+    db_service = Depends(get_database_service)
+):
     """
     Get conversation history for a user
 
@@ -100,11 +114,9 @@ async def get_conversation_history(user_id: str, limit: int = 10):
     Returns:
         List of conversation messages
     """
-    from main import db_service
-
     try:
         history = await db_service.get_conversation_history(user_id, limit)
         return {"user_id": user_id, "history": history, "count": len(history)}
     except Exception as e:
-        logger.error(f"Get history error: {e}")
+        logger.error(f"Get history error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

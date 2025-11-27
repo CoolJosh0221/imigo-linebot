@@ -1,7 +1,10 @@
 """System and health check endpoints"""
 import logging
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from datetime import datetime
+
+from config import get_config
+from dependencies import get_database_service
 
 logger = logging.getLogger(__name__)
 
@@ -31,8 +34,6 @@ async def system_info():
     Returns:
         Bot configuration and system details
     """
-    from main import get_config
-
     cfg = get_config()
     return {
         "bot": {
@@ -40,21 +41,19 @@ async def system_info():
             "language": cfg.language,
             "country": cfg.country,
         },
-        "version": "1.0.0",
+        "version": "2.0.0",
         "timestamp": datetime.utcnow().isoformat(),
     }
 
 
 @router.get("/stats")
-async def get_stats():
+async def get_stats(db_service = Depends(get_database_service)):
     """
     Get basic statistics about the service
 
     Returns:
         Service statistics
     """
-    from main import db_service
-
     try:
         # You can add more statistics here as needed
         return {

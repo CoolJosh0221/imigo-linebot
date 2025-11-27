@@ -1,14 +1,15 @@
+"""
+IMIGO - Indonesian Migrant Worker Assistant
+AI-powered LINE bot with seamless multilingual support
+"""
 import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from linebot.v3.webhook import WebhookParser
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
-    Configuration,
-    AsyncApiClient,
     AsyncMessagingApi,
     MarkMessagesAsReadByTokenRequest,
     ReplyMessageRequest,
@@ -23,97 +24,49 @@ from linebot.v3.webhooks import (
     PostbackEvent,
 )
 
-from services.container import ServiceContainer, initialize_services, cleanup_services
-from database.database import DatabaseService
-from services.ai_service import AIService
-from services.translation_service import TranslationService
-from services.language_detection import LanguageDetectionService
-from services.rich_menu_service import RichMenuService
 from config import load_config, get_config
+from dependencies import (
+    initialize_services,
+    cleanup_services,
+    get_database_service,
+    get_ai_service,
+    get_translation_service,
+    get_language_detection_service,
+    get_rich_menu_service,
+    get_line_messaging_api,
+    get_line_parser,
+)
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="IMIGO - Indonesian Migrant Worker Assistant",
-    description="AI-powered LINE bot and API for Indonesian migrant workers in Taiwan",
-    version="1.0.0",
-    docs_url="/api/docs",
-    redoc_url="/api/redoc",
-)
-
-
-# Dependency injection functions
-def get_container() -> ServiceContainer:
-    """Get service container from app state"""
-    return app.state.container
-
-
-def get_db_service() -> DatabaseService:
-    """Get database service from container"""
-    return get_container().db_service
-
-
-def get_line_messaging_api() -> AsyncMessagingApi:
-    """Get LINE messaging API from container"""
-    return get_container().line_messaging_api
-
-
-def get_line_parser() -> WebhookParser:
-    """Get LINE webhook parser from container"""
-    return get_container().line_parser
-
-
-def get_rich_menu_service() -> RichMenuService:
-    """Get rich menu service from container"""
-    return get_container().rich_menu_service
-
-
-def get_ai_service() -> AIService:
-    """Get AI service from container"""
-    return get_container().ai_service
-
-
-def get_translation_service() -> TranslationService:
-    """Get translation service from container"""
-    return get_container().translation_service
-
-
-def get_language_detection_service() -> LanguageDetectionService:
-    """Get language detection service from container"""
-    return get_container().language_detection_service
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """Application lifespan manager"""
+    # Startup
     cfg = load_config()
-
-    # Initialize all services using the service container
-    container = await initialize_services(cfg)
-    app.state.container = container
-
-    log.info(f"{cfg.name} started ({cfg.language})")
+    await initialize_services()
+    log.info(f"{cfg.name} started with default language: {cfg.language}")
 
     try:
         yield
     finally:
-        # Clean up all services
+        # Shutdown
         await cleanup_services()
         log.info("Services closed")
 
 
-app.router.lifespan_context = lifespan
+app = FastAPI(
+    title="IMIGO - Indonesian Migrant Worker Assistant",
+    description="AI-powered LINE bot and API for Indonesian migrant workers in Taiwan",
+    version="2.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    lifespan=lifespan,
+)
 
-
-@app.on_event("startup")
-async def configure_cors():
-    """Configure CORS after config is loaded"""
-    # CORS configuration will use environment variables
-    # Default to localhost for development if not specified
-    pass
-
-
-# Configure CORS - defaults will be overridden by environment variables
+# Configure CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:8000", "*"],
@@ -133,67 +86,97 @@ app.include_router(rich_menu.router)
 
 @app.get("/")
 async def root():
+    """Root endpoint"""
     cfg = get_config()
     return {
         "status": "running",
         "bot": cfg.name,
-        "language": cfg.language,
+        "default_language": cfg.language,
         "country": cfg.country,
+        "version": "2.0.0",
     }
 
 
 @app.get("/health")
 async def health():
+    """Health check endpoint"""
     return {"status": "healthy"}
 
 
-async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
-    cfg = get_config()
-    container = get_container()
-    line_api = container.line_messaging_api
-    db_service = container.db_service
-    ai_service = container.ai_service
-    translation_service = container.translation_service
-    language_detection_service = container.language_detection_service
-    rich_menu_service = container.rich_menu_service
+async def detect_and_update_language(
+    user_id: str, text: str, db_service, language_detection_service, rich_menu_service
+) -> str:
+    """
+    Detect language from text and update user preference if changed.
+    Returns the user's current language.
 
-    # Mark message as read
-    await line_api.mark_messages_as_read_by_token(
-        mark_messages_as_read_by_token_request=MarkMessagesAsReadByTokenRequest(
-            markAsReadToken=event.message.mark_as_read_token
-        ),
+    This provides seamless language switching - users can switch languages
+    just by typing in a different language, no commands needed!
+    """
+    # Get current user language
+    current_lang = await db_service.get_user_language(user_id)
+
+    # Detect language from message
+    detected_lang = language_detection_service.detect_language(text)
+
+    # If this is a new user or language has changed, update it
+    if not current_lang:
+        # New user - set language and rich menu
+        await db_service.set_user_language(user_id, detected_lang)
+        await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
+        log.info(f"New user {user_id[:8]}: detected language '{detected_lang}'")
+        return detected_lang
+
+    # Check if user is switching languages
+    if detected_lang != current_lang:
+        # Language switched! Update preference and rich menu
+        await db_service.set_user_language(user_id, detected_lang)
+        await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
+        log.info(
+            f"User {user_id[:8]} switched language: '{current_lang}' → '{detected_lang}'"
+        )
+        return detected_lang
+
+    return current_lang
+
+
+async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
+    """Handle text messages from users with seamless multilingual support"""
+    cfg = get_config()
+
+    # Get services
+    line_api = await get_line_messaging_api()
+    db_service = await get_database_service()
+    ai_service = await get_ai_service()
+    translation_service = await get_translation_service()
+    language_detection_service = await get_language_detection_service()
+    rich_menu_service = await get_rich_menu_service()
+
+    # Mark message as read (with error handling)
+    try:
+        if hasattr(event.message, 'mark_as_read_token') and event.message.mark_as_read_token:
+            await line_api.mark_messages_as_read_by_token(
+                mark_messages_as_read_by_token_request=MarkMessagesAsReadByTokenRequest(
+                    markAsReadToken=event.message.mark_as_read_token
+                ),
+            )
+    except Exception as e:
+        log.warning(f"Failed to mark message as read: {e}")
+
+    # Seamless language detection and switching
+    user_lang = await detect_and_update_language(
+        user_id, text, db_service, language_detection_service, rich_menu_service
     )
 
-    # Check if this is a new user (no language set yet)
-    user_lang = await db_service.get_user_language(user_id)
-    if not user_lang:
-        # Auto-detect language from user's first message
-        detected_lang = language_detection_service.detect_language(text)
-        log.info(f"New user {user_id[:8]}, detected language: {detected_lang}")
-        await db_service.set_user_language(user_id, detected_lang)
-
-        # Set appropriate rich menu for user based on detected language
-        await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
-
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=cfg.get_message("welcome", detected_lang))],
-            )
-        )
-        return
-
-    # Handle language switching command
+    # Check if user is explicitly requesting language change via command
     if text.strip().lower().startswith("/lang"):
         parts = text.strip().split()
         if len(parts) == 2:
             lang_code = parts[1].lower()
             if cfg.is_valid_language(lang_code):
                 await db_service.set_user_language(user_id, lang_code)
-                log.info(f"User {user_id[:8]} changed language to {lang_code}")
-
-                # Update rich menu for the new language
                 await rich_menu_service.set_user_rich_menu(user_id, lang_code)
+                log.info(f"User {user_id[:8]} manually changed language to {lang_code}")
 
                 await line_api.reply_message(
                     ReplyMessageRequest(
@@ -260,21 +243,29 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
         group_settings = await db_service.get_group_settings(group_id)
         if group_settings and group_settings.get("translate_enabled"):
             target_lang = group_settings.get("target_language", "zh")
-            translated = await translation_service.translate_message(
-                text, target_lang, source_language="auto"
-            )
-            formatted = translation_service.format_translation_message(
-                text, translated, target_lang
-            )
-            await line_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token, messages=[TextMessage(text=formatted)]
+            try:
+                translated = await translation_service.translate_message(
+                    text, target_lang, source_language="auto"
                 )
-            )
+                formatted = translation_service.format_translation_message(
+                    text, translated, target_lang
+                )
+                await line_api.reply_message(
+                    ReplyMessageRequest(
+                        reply_token=event.reply_token, messages=[TextMessage(text=formatted)]
+                    )
+                )
+            except Exception as e:
+                log.error(f"Translation error: {e}", exc_info=True)
             return
 
     # Use AI service for all other messages
-    reply = await ai_service.generate_response(user_id, text)
+    try:
+        reply = await ai_service.generate_response(user_id, text)
+    except Exception as e:
+        log.error(f"AI service error: {e}", exc_info=True)
+        # Fallback to help message in user's language
+        reply = cfg.get_message("help", user_lang)
 
     await line_api.reply_message(
         ReplyMessageRequest(
@@ -284,12 +275,14 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 
 
 async def handle_postback(event: PostbackEvent) -> None:
+    """Handle postback events from rich menu buttons"""
     cfg = get_config()
-    container = get_container()
-    line_api = container.line_messaging_api
-    db_service = container.db_service
-    ai_service = container.ai_service
-    rich_menu_service = container.rich_menu_service
+
+    # Get services
+    line_api = await get_line_messaging_api()
+    db_service = await get_database_service()
+    ai_service = await get_ai_service()
+    rich_menu_service = await get_rich_menu_service()
 
     user_id = event.source.user_id
     data = event.postback.data
@@ -344,10 +337,8 @@ async def handle_postback(event: PostbackEvent) -> None:
         lang_code = data.split("_")[1]
         if cfg.is_valid_language(lang_code):
             await db_service.set_user_language(user_id, lang_code)
-            log.info(f"User {user_id[:8]} changed language to {lang_code} via postback")
-
-            # Update rich menu for the new language
             await rich_menu_service.set_user_rich_menu(user_id, lang_code)
+            log.info(f"User {user_id[:8]} changed language to {lang_code} via postback")
 
             await line_api.reply_message(
                 ReplyMessageRequest(
@@ -367,7 +358,12 @@ async def handle_postback(event: PostbackEvent) -> None:
         }
 
         prompt = prompts.get(data, cfg.get_message("help", user_lang))
-        reply = await ai_service.generate_response(user_id, prompt)
+
+        try:
+            reply = await ai_service.generate_response(user_id, prompt)
+        except Exception as e:
+            log.error(f"AI service error in postback: {e}", exc_info=True)
+            reply = cfg.get_message("help", user_lang)
 
         await line_api.reply_message(
             ReplyMessageRequest(
@@ -377,6 +373,7 @@ async def handle_postback(event: PostbackEvent) -> None:
 
 
 async def handle_message(event: MessageEvent) -> None:
+    """Route message events to appropriate handlers"""
     user_id = event.source.user_id
 
     if isinstance(event.message, TextMessageContent):
@@ -387,23 +384,41 @@ async def handle_message(event: MessageEvent) -> None:
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    parser = get_container().line_parser
-
-    signature = request.headers.get("X-Line-Signature", "")
-    body = (await request.body()).decode()
-
+    """LINE webhook endpoint for receiving events"""
     try:
-        events = parser.parse(body, signature)
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        parser = get_line_parser()
 
-    for event in events:
-        if isinstance(event, MessageEvent):
-            await handle_message(event)
-        elif isinstance(event, PostbackEvent):
-            await handle_postback(event)
+        # Get signature and body
+        signature = request.headers.get("X-Line-Signature", "")
+        body = (await request.body()).decode()
 
-    return {"status": "ok"}
+        # Validate signature and parse events
+        try:
+            events = parser.parse(body, signature)
+        except InvalidSignatureError:
+            log.error("Invalid LINE signature")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+
+        # Process each event
+        for event in events:
+            try:
+                if isinstance(event, MessageEvent):
+                    await handle_message(event)
+                elif isinstance(event, PostbackEvent):
+                    await handle_postback(event)
+                else:
+                    log.info(f"Unhandled event type: {type(event).__name__}")
+            except Exception as e:
+                # Log error but don't fail the webhook
+                log.error(f"Error processing event: {e}", exc_info=True)
+
+        return {"status": "ok"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Webhook error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 if __name__ == "__main__":

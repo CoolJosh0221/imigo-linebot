@@ -101,8 +101,12 @@ IMPORTANT:
 """
 
     async def aclose(self) -> None:
-        # Close underlying HTTP client for AsyncOpenAI
-        await self.client.close()
+        """Close underlying HTTP client for AsyncOpenAI"""
+        try:
+            await self.client.close()
+            logger.info("AI service client closed")
+        except Exception as e:
+            logger.error(f"Error closing AI service client: {e}")
 
     async def generate_response(self, user_id: str, message: str) -> str:
         """

@@ -129,6 +129,14 @@ SUPPORTED_LANGUAGES = {
     "vi": "Tiếng Việt",
 }
 
+# Language-specific chat bar text for rich menus (max 14 characters)
+CHAT_BAR_TEXT = {
+    "id": "Bantuan",  # Help in Indonesian
+    "zh": "幫助",  # Help in Chinese
+    "en": "Help",  # Help in English
+    "vi": "Trợ giúp",  # Help in Vietnamese
+}
+
 # Emergency contacts for Taiwan
 EMERGENCY_CONTACTS = {
     "police": "110",
@@ -239,6 +247,11 @@ class BotConfig:
     def is_valid_language(lang_code: str) -> bool:
         """Check if a language code is supported"""
         return lang_code in SUPPORTED_LANGUAGES
+
+    @staticmethod
+    def get_chat_bar_text(lang_code: str) -> str:
+        """Get chat bar text for rich menu in specified language"""
+        return CHAT_BAR_TEXT.get(lang_code, "Help")
 
 
 _config: Optional[BotConfig] = None
