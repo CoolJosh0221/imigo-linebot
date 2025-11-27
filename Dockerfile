@@ -20,8 +20,8 @@ RUN pip install --no-cache-dir --upgrade pip uv && \
 # Copy application code
 COPY . .
 
-# Create directory for database
-RUN mkdir -p /data
+# Create directory for database with proper permissions
+RUN mkdir -p /data && chmod 777 /data
 
 # Expose port
 EXPOSE 8000
