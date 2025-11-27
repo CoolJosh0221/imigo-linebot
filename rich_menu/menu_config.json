@@ -10,9 +10,9 @@
     {
       "bounds": {
         "x": 0,
-        "y": 843,
-        "width": 625,
-        "height": 421
+        "y": 0,
+        "width": 833,
+        "height": 843
       },
       "action": {
         "type": "postback",
@@ -21,10 +21,10 @@
     },
     {
       "bounds": {
-        "x": 625,
-        "y": 843,
-        "width": 625,
-        "height": 421
+        "x": 833,
+        "y": 0,
+        "width": 834,
+        "height": 843
       },
       "action": {
         "type": "postback",
@@ -33,10 +33,10 @@
     },
     {
       "bounds": {
-        "x": 1250,
-        "y": 843,
-        "width": 625,
-        "height": 421
+        "x": 1667,
+        "y": 0,
+        "width": 833,
+        "height": 843
       },
       "action": {
         "type": "postback",
@@ -45,10 +45,10 @@
     },
     {
       "bounds": {
-        "x": 1875,
+        "x": 0,
         "y": 843,
-        "width": 625,
-        "height": 421
+        "width": 833,
+        "height": 843
       },
       "action": {
         "type": "postback",
@@ -57,10 +57,10 @@
     },
     {
       "bounds": {
-        "x": 0,
-        "y": 1264,
-        "width": 625,
-        "height": 422
+        "x": 833,
+        "y": 843,
+        "width": 834,
+        "height": 843
       },
       "action": {
         "type": "postback",
@@ -69,38 +69,14 @@
     },
     {
       "bounds": {
-        "x": 625,
-        "y": 1264,
-        "width": 625,
-        "height": 422
-      },
-      "action": {
-        "type": "postback",
-        "data": "category_daily"
-      }
-    },
-    {
-      "bounds": {
-        "x": 1250,
-        "y": 1264,
-        "width": 625,
-        "height": 422
+        "x": 1667,
+        "y": 843,
+        "width": 833,
+        "height": 843
       },
       "action": {
         "type": "postback",
         "data": "category_translate"
-      }
-    },
-    {
-      "bounds": {
-        "x": 1875,
-        "y": 1264,
-        "width": 625,
-        "height": 422
-      },
-      "action": {
-        "type": "postback",
-        "data": "clear_chat"
       }
     }
   ]

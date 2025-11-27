@@ -1,47 +1,46 @@
-"""
-IMIGO - Indonesian Migrant Worker Assistant
-AI-powered LINE bot with seamless multilingual support
-"""
 import logging
+from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from typing import Any, Optional
 
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-
 from linebot.v3.exceptions import InvalidSignatureError
 from linebot.v3.messaging import (
     AsyncMessagingApi,
-    MarkMessagesAsReadByTokenRequest,
-    ReplyMessageRequest,
-    TextMessage,
-    FlexMessage,
     FlexContainer,
+    FlexMessage,
+    MarkMessagesAsReadByTokenRequest,
+    MessageAction,
     QuickReply,
     QuickReplyItem,
-    MessageAction,
+    ReplyMessageRequest,
+    TextMessage,
 )
 from linebot.v3.webhooks import (
+    FollowEvent,
     MessageEvent,
-    TextMessageContent,
     PostbackEvent,
+    TextMessageContent,
 )
 
-from config import load_config, get_config, NEW_USER_WELCOME_MESSAGE
+from api.routes import chat, rich_menu, system, translation
+from config import get_config, load_config
+from database.database import DatabaseService
 from dependencies import (
-    initialize_services,
     cleanup_services,
-    get_database_service,
     get_ai_service,
-    get_translation_service,
-    get_language_detection_service,
-    get_rich_menu_service,
+    get_database_service,
     get_line_messaging_api,
     get_line_parser,
+    get_rich_menu_service,
+    get_translation_service,
+    initialize_services,
 )
 from services.flex_messages import (
-    create_new_user_welcome_flex,
-    create_help_flex_message,
     create_emergency_flex_message,
+    create_help_flex_message,
+    create_new_user_welcome_flex,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -49,17 +48,13 @@ log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan manager"""
-    # Startup
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     cfg = load_config()
     await initialize_services()
     log.info(f"{cfg.name} started with default language: {cfg.language}")
-
     try:
         yield
     finally:
-        # Shutdown
         await cleanup_services()
         log.info("Services closed")
 
@@ -73,17 +68,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8000", "*"],
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Line-Signature"],
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Include API routers
-from api.routes import chat, translation, system, rich_menu
 
 app.include_router(chat.router)
 app.include_router(translation.router)
@@ -92,8 +84,7 @@ app.include_router(rich_menu.router)
 
 
 @app.get("/")
-async def root():
-    """Root endpoint"""
+async def root() -> dict[str, Any]:
     cfg = get_config()
     return {
         "status": "running",
@@ -105,213 +96,131 @@ async def root():
 
 
 @app.get("/health")
-async def health():
-    """Health check endpoint"""
+async def health() -> dict[str, str]:
     return {"status": "healthy"}
 
 
-async def detect_and_update_language(
-    user_id: str, text: str, db_service, language_detection_service, rich_menu_service
-) -> str:
-    """
-    Get user's language preference or None for new users.
-
-    For existing users, language preference is sticky and only changed
-    via explicit /lang command or rich menu selection.
-
-    For new users, returns None to prompt them to select a language.
-    """
-    # Get current user language
+async def get_user_language(user_id: str, db_service: DatabaseService) -> Optional[str]:
     current_lang = await db_service.get_user_language(user_id)
+    if not current_lang:
+        log.info(f"New user {user_id[:8]}: prompting for language selection")
+    return current_lang
 
-    # For existing users, use their saved preference
-    if current_lang:
-        return current_lang
 
-    # New user - return None to prompt language selection
-    log.info(f"New user {user_id[:8]}: prompting for language selection")
-    return None
+def create_language_quick_reply() -> QuickReply:
+    return QuickReply(
+        items=[
+            QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
+            QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
+            QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
+            QuickReplyItem(action=MessageAction(label="🇻🇳 Tiếng Việt", text="/lang vi")),
+        ]
+    )
+
+
+async def send_flex_message(line_api: AsyncMessagingApi, reply_token: str, flex_content: dict, alt_text: str) -> None:
+    await line_api.reply_message(
+        ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[FlexMessage(alt_text=alt_text, contents=FlexContainer.from_dict(flex_content))],
+        )
+    )
+
+
+async def send_text_message(line_api: AsyncMessagingApi, reply_token: str, text: str, quick_reply: Optional[QuickReply] = None) -> None:
+    await line_api.reply_message(
+        ReplyMessageRequest(
+            reply_token=reply_token,
+            messages=[TextMessage(text=text, quick_reply=quick_reply)],
+        )
+    )
+
+
+async def set_user_language(user_id: str, lang_code: str, db_service: DatabaseService, rich_menu_service) -> tuple[bool, str]:
+    current_lang = await db_service.get_user_language(user_id)
+    is_new_user = current_lang is None
+
+    await db_service.set_user_language(user_id, lang_code)
+    await rich_menu_service.set_user_rich_menu(user_id, lang_code)
+
+    log.info(f"User {user_id[:8]} {'set initial' if is_new_user else 'changed'} language to {lang_code}")
+
+    cfg = get_config()
+    message = cfg.get_message("welcome" if is_new_user else "language_changed", lang_code)
+    return is_new_user, message
 
 
 async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
-    """Handle text messages from users with seamless multilingual support"""
     cfg = get_config()
-
-    # Get services
     line_api = await get_line_messaging_api()
     db_service = await get_database_service()
     ai_service = await get_ai_service()
     translation_service = await get_translation_service()
-    language_detection_service = await get_language_detection_service()
     rich_menu_service = await get_rich_menu_service()
 
-    # Mark message as read (with error handling)
     try:
-        if hasattr(event.message, 'mark_as_read_token') and event.message.mark_as_read_token:
+        if hasattr(event.message, "mark_as_read_token") and event.message.mark_as_read_token:
             await line_api.mark_messages_as_read_by_token(
-                mark_messages_as_read_by_token_request=MarkMessagesAsReadByTokenRequest(
-                    markAsReadToken=event.message.mark_as_read_token
-                ),
+                MarkMessagesAsReadByTokenRequest(markAsReadToken=event.message.mark_as_read_token)
             )
     except Exception as e:
         log.warning(f"Failed to mark message as read: {e}")
 
-    # Get user's language preference (None for new users)
-    user_lang = await detect_and_update_language(
-        user_id, text, db_service, language_detection_service, rich_menu_service
-    )
+    cmd = text.strip().lower()
 
-    # Handle new users - prompt for language selection
-    if user_lang is None:
-        # Show beautiful flex message with language selection buttons
-        flex_content = create_new_user_welcome_flex()
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[
-                    FlexMessage(
-                        alt_text="Welcome to IMIGO! Please select your language.",
-                        contents=FlexContainer.from_dict(flex_content)
-                    )
-                ],
-            )
-        )
-        return
-
-    # Check if user is explicitly requesting language change via command
-    if text.strip().lower().startswith("/lang"):
+    # Handle language selection first (works for both new and existing users)
+    if cmd.startswith("/lang"):
         parts = text.strip().split()
-        if len(parts) == 2:
-            lang_code = parts[1].lower()
-            if cfg.is_valid_language(lang_code):
-                # Check if this is a first-time language selection
-                is_new_user = user_lang is None
-
-                await db_service.set_user_language(user_id, lang_code)
-                await rich_menu_service.set_user_rich_menu(user_id, lang_code)
-                log.info(f"User {user_id[:8]} {'set initial' if is_new_user else 'changed'} language to {lang_code}")
-
-                # Send welcome message for new users, confirmation for existing users
-                if is_new_user:
-                    message_text = cfg.get_message("welcome", lang_code)
-                else:
-                    message_text = cfg.get_message("language_changed", lang_code)
-
-                await line_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token,
-                        messages=[TextMessage(text=message_text)],
-                    )
-                )
-                return
-
-        # Show language selection with quick reply buttons
-        quick_reply = QuickReply(
-            items=[
-                QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
-                QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
-                QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
-                QuickReplyItem(action=MessageAction(label="🇻🇳 Tiếng Việt", text="/lang vi")),
-            ]
-        )
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[
-                    TextMessage(
-                        text=cfg.get_message("language_select", user_lang),
-                        quick_reply=quick_reply,
-                    )
-                ],
-            )
-        )
+        if len(parts) == 2 and cfg.is_valid_language(parts[1].lower()):
+            _, message = await set_user_language(user_id, parts[1].lower(), db_service, rich_menu_service)
+            await send_text_message(line_api, event.reply_token, message)
+            return
+        # Show language selection prompt
+        user_lang = await get_user_language(user_id, db_service)
+        await send_text_message(line_api, event.reply_token, cfg.get_message("language_select", user_lang or cfg.language), create_language_quick_reply())
         return
 
-    # Handle other simple commands
-    if text.strip().lower() == "/help":
-        # Show help menu with flex message
-        flex_content = create_help_flex_message(user_lang)
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[
-                    FlexMessage(
-                        alt_text="IMIGO Help Menu - Select a category",
-                        contents=FlexContainer.from_dict(flex_content)
-                    )
-                ],
-            )
-        )
+    user_lang = await get_user_language(user_id, db_service)
+
+    if user_lang is None:
+        await send_flex_message(line_api, event.reply_token, create_new_user_welcome_flex(), "Welcome to IMIGO! Please select your language.")
         return
 
-    if text.strip().lower() == "/emergency":
-        # Show emergency contacts with flex message
-        flex_content = create_emergency_flex_message(user_lang)
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[
-                    FlexMessage(
-                        alt_text="Emergency Contacts - Taiwan",
-                        contents=FlexContainer.from_dict(flex_content)
-                    )
-                ],
-            )
-        )
+    if cmd == "/help":
+        await send_flex_message(line_api, event.reply_token, create_help_flex_message(user_lang), "IMIGO Help Menu")
         return
 
-    if text.strip().lower() == "/clear":
+    if cmd == "/emergency":
+        await send_flex_message(line_api, event.reply_token, create_emergency_flex_message(user_lang), "Emergency Contacts - Taiwan")
+        return
+
+    if cmd == "/clear":
         await db_service.clear_user_conversation(user_id)
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=cfg.get_message("cleared", user_lang))],
-            )
-        )
+        await send_text_message(line_api, event.reply_token, cfg.get_message("cleared", user_lang))
         return
 
-    # Handle group chat translation
     group_id = getattr(event.source, "group_id", None)
     if group_id:
         group_settings = await db_service.get_group_settings(group_id)
         if group_settings and group_settings.get("translate_enabled"):
-            target_lang = group_settings.get("target_language", "zh")
             try:
-                translated = await translation_service.translate_message(
-                    text, target_lang, source_language="auto"
-                )
-                formatted = translation_service.format_translation_message(
-                    text, translated, target_lang
-                )
-                await line_api.reply_message(
-                    ReplyMessageRequest(
-                        reply_token=event.reply_token, messages=[TextMessage(text=formatted)]
-                    )
-                )
+                translated = await translation_service.translate_message(text, group_settings.get("target_language", "zh"), source_language="auto")
+                await send_text_message(line_api, event.reply_token, translation_service.format_translation_message(text, translated, group_settings.get("target_language", "zh")))
             except Exception as e:
                 log.error(f"Translation error: {e}", exc_info=True)
             return
 
-    # Use AI service for all other messages
     try:
         reply = await ai_service.generate_response(user_id, text)
     except Exception as e:
         log.error(f"AI service error: {e}", exc_info=True)
-        # Fallback to help message in user's language
         reply = cfg.get_message("help", user_lang)
 
-    await line_api.reply_message(
-        ReplyMessageRequest(
-            reply_token=event.reply_token, messages=[TextMessage(text=reply)]
-        )
-    )
+    await send_text_message(line_api, event.reply_token, reply)
 
 
 async def handle_postback(event: PostbackEvent) -> None:
-    """Handle postback events from rich menu buttons"""
     cfg = get_config()
-
-    # Get services
     line_api = await get_line_messaging_api()
     db_service = await get_database_service()
     ai_service = await get_ai_service()
@@ -319,85 +228,27 @@ async def handle_postback(event: PostbackEvent) -> None:
 
     user_id = event.source.user_id
     data = event.postback.data
-
     log.info(f"Postback event: {data} from user {user_id[:8]}")
 
-    # Get user language
     user_lang = await db_service.get_user_language(user_id) or cfg.language
 
     if data == "clear_chat":
         await db_service.clear_user_conversation(user_id)
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[TextMessage(text=cfg.get_message("cleared", user_lang))],
-            )
-        )
+        await send_text_message(line_api, event.reply_token, cfg.get_message("cleared", user_lang))
 
     elif data == "category_emergency":
-        # Show emergency contacts with flex message
-        flex_content = create_emergency_flex_message(user_lang)
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[
-                    FlexMessage(
-                        alt_text="Emergency Contacts - Taiwan",
-                        contents=FlexContainer.from_dict(flex_content)
-                    )
-                ],
-            )
-        )
+        await send_flex_message(line_api, event.reply_token, create_emergency_flex_message(user_lang), "Emergency Contacts - Taiwan")
 
     elif data == "category_language":
-        # Show language selection with quick reply buttons
-        quick_reply = QuickReply(
-            items=[
-                QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
-                QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
-                QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
-                QuickReplyItem(action=MessageAction(label="🇻🇳 Tiếng Việt", text="/lang vi")),
-            ]
-        )
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token,
-                messages=[
-                    TextMessage(
-                        text=cfg.get_message("language_select", user_lang),
-                        quick_reply=quick_reply,
-                    )
-                ],
-            )
-        )
+        await send_text_message(line_api, event.reply_token, cfg.get_message("language_select", user_lang), create_language_quick_reply())
 
     elif data.startswith("lang_"):
-        # Handle language switching via postback
         lang_code = data.split("_")[1]
         if cfg.is_valid_language(lang_code):
-            # Check if this is a first-time language selection
-            current_lang = await db_service.get_user_language(user_id)
-            is_new_user = current_lang is None
-
-            await db_service.set_user_language(user_id, lang_code)
-            await rich_menu_service.set_user_rich_menu(user_id, lang_code)
-            log.info(f"User {user_id[:8]} {'set initial' if is_new_user else 'changed'} language to {lang_code} via postback")
-
-            # Send welcome message for new users, confirmation for existing users
-            if is_new_user:
-                message_text = cfg.get_message("welcome", lang_code)
-            else:
-                message_text = cfg.get_message("language_changed", lang_code)
-
-            await line_api.reply_message(
-                ReplyMessageRequest(
-                    reply_token=event.reply_token,
-                    messages=[TextMessage(text=message_text)],
-                )
-            )
+            _, message = await set_user_language(user_id, lang_code, db_service, rich_menu_service)
+            await send_text_message(line_api, event.reply_token, message)
 
     else:
-        # Handle category postbacks with AI
         prompts = {
             "category_labor": "I have a problem at work",
             "category_government": "I need information about government services",
@@ -406,59 +257,67 @@ async def handle_postback(event: PostbackEvent) -> None:
             "category_healthcare": "I need healthcare information",
         }
 
-        prompt = prompts.get(data, cfg.get_message("help", user_lang))
-
         try:
-            reply = await ai_service.generate_response(user_id, prompt)
+            reply = await ai_service.generate_response(user_id, prompts.get(data, cfg.get_message("help", user_lang)))
         except Exception as e:
             log.error(f"AI service error in postback: {e}", exc_info=True)
             reply = cfg.get_message("help", user_lang)
 
-        await line_api.reply_message(
-            ReplyMessageRequest(
-                reply_token=event.reply_token, messages=[TextMessage(text=reply)]
-            )
-        )
+        await send_text_message(line_api, event.reply_token, reply)
+
+
+async def handle_follow(event: FollowEvent) -> None:
+    """Handle when a user adds the bot as a friend"""
+    user_id = event.source.user_id
+    log.info(f"New user followed: {user_id[:8]}")
+
+    line_api = await get_line_messaging_api()
+    db_service = await get_database_service()
+    rich_menu_service = await get_rich_menu_service()
+
+    # Check if user already exists (e.g., they blocked and unblocked)
+    existing_lang = await db_service.get_user_language(user_id)
+
+    if existing_lang:
+        # Returning user - send a welcome back message in their language
+        cfg = get_config()
+        await send_text_message(line_api, event.reply_token, cfg.get_message("welcome", existing_lang))
+        await rich_menu_service.set_user_rich_menu(user_id, existing_lang)
+    else:
+        # Brand new user - send multi-language welcome flex message
+        await send_flex_message(line_api, event.reply_token, create_new_user_welcome_flex(), "Welcome to IMIGO! Please select your language.")
 
 
 async def handle_message(event: MessageEvent) -> None:
-    """Route message events to appropriate handlers"""
-    user_id = event.source.user_id
-
     if isinstance(event.message, TextMessageContent):
-        await handle_text_message(event, user_id, event.message.text)
+        await handle_text_message(event, event.source.user_id, event.message.text)
     else:
         log.info(f"Unhandled message type: {type(event.message)}")
 
 
 @app.post("/webhook")
-async def webhook(request: Request):
-    """LINE webhook endpoint for receiving events"""
+async def webhook(request: Request) -> dict[str, str]:
     try:
-        parser = get_line_parser()
-
-        # Get signature and body
         signature = request.headers.get("X-Line-Signature", "")
         body = (await request.body()).decode()
 
-        # Validate signature and parse events
         try:
-            events = parser.parse(body, signature)
+            events = get_line_parser().parse(body, signature)
         except InvalidSignatureError:
             log.error("Invalid LINE signature")
             raise HTTPException(status_code=400, detail="Invalid signature")
 
-        # Process each event
         for event in events:
             try:
-                if isinstance(event, MessageEvent):
+                if isinstance(event, FollowEvent):
+                    await handle_follow(event)
+                elif isinstance(event, MessageEvent):
                     await handle_message(event)
                 elif isinstance(event, PostbackEvent):
                     await handle_postback(event)
                 else:
                     log.info(f"Unhandled event type: {type(event).__name__}")
             except Exception as e:
-                # Log error but don't fail the webhook
                 log.error(f"Error processing event: {e}", exc_info=True)
 
         return {"status": "ok"}

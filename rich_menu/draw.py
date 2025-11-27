@@ -5,42 +5,42 @@ import os
 TRANSLATIONS = {
     "en": {
         "buttons": {
-            "health": "Health",
-            "work": "Work",
-            "language": "Language",
-            "emergency": "Emergency",
-            "govt": "Government",
-            "translate": "Translate",
+            "health": "Health & Medical",
+            "work": "Work & Employment",
+            "language": "Switch Language",
+            "emergency": "Emergency Help",
+            "govt": "Government Services",
+            "translate": "Translate Text",
         }
     },
     "zh": {
         "buttons": {
-            "health": "健康醫療",
-            "work": "工作權益",
-            "language": "語言學習",
-            "emergency": "緊急求助",
+            "health": "健康與醫療",
+            "work": "工作與就業",
+            "language": "切換語言",
+            "emergency": "緊急協助",
             "govt": "政府服務",
-            "translate": "即時翻譯",
+            "translate": "文字翻譯",
         }
     },
     "id": {
         "buttons": {
-            "health": "Kesehatan",
-            "work": "Pekerjaan",
-            "language": "Bahasa",
-            "emergency": "Darurat",
-            "govt": "Pemerintah",
-            "translate": "Terjemahan",
+            "health": "Kesehatan & Medis",
+            "work": "Pekerjaan & Kerja",
+            "language": "Ganti Bahasa",
+            "emergency": "Bantuan Darurat",
+            "govt": "Layanan Pemerintah",
+            "translate": "Terjemahkan Teks",
         }
     },
     "vi": {
         "buttons": {
-            "health": "Sức Khỏe",
-            "work": "Công Việc",
-            "language": "Ngôn Ngữ",
-            "emergency": "Khẩn Cấp",
-            "govt": "Chính Phủ",
-            "translate": "Dịch Thuật",
+            "health": "Sức Khỏe & Y Tế",
+            "work": "Việc Làm & Lao Động",
+            "language": "Đổi Ngôn Ngữ",
+            "emergency": "Trợ Giúp Khẩn Cấp",
+            "govt": "Dịch Vụ Chính Phủ",
+            "translate": "Dịch Văn Bản",
         }
     },
 }

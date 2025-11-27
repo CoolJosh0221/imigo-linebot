@@ -2,70 +2,55 @@
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Dict
-import os
+from typing import Dict, Optional
 
 from linebot.v3.messaging import (
     AsyncMessagingApi,
     AsyncMessagingApiBlob,
-    RichMenuRequest,
-    RichMenuSize,
+    PostbackAction,
     RichMenuArea,
     RichMenuBounds,
-    PostbackAction,
+    RichMenuRequest,
+    RichMenuSize,
 )
 
 from config import BotConfig
-from exceptions import RichMenuError, ValidationError
+from exceptions import RichMenuError
 
 logger = logging.getLogger(__name__)
 
 
 class RichMenuService:
-    """Service to manage LINE rich menus"""
+    SUPPORTED_LANGUAGES = ["en", "id", "vi", "zh"]
+    LANGUAGE_NAMES = {
+        "en": "English Menu",
+        "id": "Menu Bahasa Indonesia",
+        "vi": "Thực đơn Tiếng Việt",
+        "zh": "繁體中文選單",
+    }
 
     def __init__(self, line_api: AsyncMessagingApi, blob_api: AsyncMessagingApiBlob):
         self.line_api = line_api
         self.blob_api = blob_api
         self.config_path = Path(__file__).parent.parent / "rich_menu" / "menu_config.json"
         self.rich_menu_dir = Path(__file__).parent.parent / "rich_menu"
-        # Store rich menu IDs for each language
-        self.language_menus: Dict[str, str] = {}  # language_code -> rich_menu_id
+        self.language_menus: Dict[str, str] = {}
 
     def _validate_image_path(self, image_path: str) -> Path:
-        """
-        Validate and sanitize image path to prevent path traversal attacks
-
-        Args:
-            image_path: Path to validate
-
-        Returns:
-            Validated Path object
-
-        Raises:
-            ValueError: If path is invalid or outside allowed directory
-        """
-        # Convert to Path object
         path = Path(image_path).resolve()
 
-        # Ensure the path exists and is a file
         if not path.exists():
             raise ValueError(f"Image file does not exist: {image_path}")
-
         if not path.is_file():
             raise ValueError(f"Path is not a file: {image_path}")
 
-        # Ensure the path is within the rich_menu directory
-        rich_menu_dir_resolved = self.rich_menu_dir.resolve()
         try:
-            path.relative_to(rich_menu_dir_resolved)
+            path.relative_to(self.rich_menu_dir.resolve())
         except ValueError:
             raise ValueError(f"Image path must be within the rich_menu directory: {image_path}")
 
-        # Validate file extension
-        allowed_extensions = {'.png', '.jpg', '.jpeg'}
-        if path.suffix.lower() not in allowed_extensions:
-            raise ValueError(f"Invalid image format. Allowed: {allowed_extensions}")
+        if path.suffix.lower() not in {'.png', '.jpg', '.jpeg'}:
+            raise ValueError(f"Invalid image format: {path.suffix}")
 
         return path
 
