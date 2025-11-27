@@ -222,3 +222,7 @@ models/
 letsencrypt/
 *.db
 database.db
+
+# Data directory (keep structure, ignore contents)
+data/*
+!data/.gitkeep
