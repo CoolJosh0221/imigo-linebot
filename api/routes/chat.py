@@ -4,29 +4,15 @@ from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 from typing import Optional
 
-from services.ai_service import AIService
-from services.language_detection import LanguageDetectionService
-from database.database import DatabaseService
-from services.container import get_container
+from dependencies import (
+    get_ai_service,
+    get_database_service,
+    get_language_detection_service,
+)
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/chat", tags=["Chat"])
-
-
-def get_ai_svc() -> AIService:
-    """Get AI service from service container"""
-    return get_container().ai_service
-
-
-def get_db_svc() -> DatabaseService:
-    """Get database service from service container"""
-    return get_container().db_service
-
-
-def get_lang_detect_svc() -> LanguageDetectionService:
-    """Get language detection service from service container"""
-    return get_container().language_detection_service
 
 
 class ChatRequest(BaseModel):
@@ -49,9 +35,9 @@ class ClearChatRequest(BaseModel):
 @router.post("/message", response_model=ChatResponse)
 async def send_message(
     request: ChatRequest,
-    ai_service: AIService = Depends(get_ai_svc),
-    db_service: DatabaseService = Depends(get_db_svc),
-    language_detection_service: LanguageDetectionService = Depends(get_lang_detect_svc)
+    ai_service = Depends(get_ai_service),
+    db_service = Depends(get_database_service),
+    language_detection_service = Depends(get_language_detection_service)
 ):
     """
     Send a message to the bot and get a response
@@ -93,7 +79,7 @@ async def send_message(
 @router.post("/clear")
 async def clear_conversation(
     request: ClearChatRequest,
-    db_service: DatabaseService = Depends(get_db_svc)
+    db_service = Depends(get_database_service)
 ):
     """
     Clear conversation history for a user
@@ -116,7 +102,7 @@ async def clear_conversation(
 async def get_conversation_history(
     user_id: str,
     limit: int = 10,
-    db_service: DatabaseService = Depends(get_db_svc)
+    db_service = Depends(get_database_service)
 ):
     """
     Get conversation history for a user

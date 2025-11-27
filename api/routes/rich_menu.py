@@ -3,8 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from services.rich_menu_service import RichMenuService
-from services.container import get_container
+from dependencies import get_rich_menu_service
 
 logger = logging.getLogger(__name__)
 
@@ -26,15 +25,10 @@ class UploadImageRequest(BaseModel):
     image_path: str
 
 
-def get_rich_menu_svc() -> RichMenuService:
-    """Get rich menu service from service container"""
-    return get_container().rich_menu_service
-
-
 @router.post("/setup")
 async def setup_rich_menu(
     request: RichMenuSetupRequest,
-    service: RichMenuService = Depends(get_rich_menu_svc)
+    service = Depends(get_rich_menu_service)
 ):
     """
     Create and optionally set as default rich menu (legacy single-menu setup)
@@ -77,7 +71,7 @@ async def setup_rich_menu(
 
 @router.post("/setup-language-menus")
 async def setup_language_menus(
-    service: RichMenuService = Depends(get_rich_menu_svc)
+    service = Depends(get_rich_menu_service)
 ):
     """
     Create or load language-specific rich menus for all supported languages
@@ -116,7 +110,7 @@ async def setup_language_menus(
 @router.post("/upload-image")
 async def upload_rich_menu_image(
     request: UploadImageRequest,
-    service: RichMenuService = Depends(get_rich_menu_svc)
+    service = Depends(get_rich_menu_service)
 ):
     """
     Upload an image to an existing rich menu
@@ -144,7 +138,7 @@ async def upload_rich_menu_image(
 
 
 @router.get("/list")
-async def list_rich_menus(service: RichMenuService = Depends(get_rich_menu_svc)):
+async def list_rich_menus(service = Depends(get_rich_menu_service)):
     """
     Get list of all rich menus
 
@@ -174,7 +168,7 @@ async def list_rich_menus(service: RichMenuService = Depends(get_rich_menu_svc))
 
 
 @router.get("/default")
-async def get_default_rich_menu(service: RichMenuService = Depends(get_rich_menu_svc)):
+async def get_default_rich_menu(service = Depends(get_rich_menu_service)):
     """
     Get the default rich menu ID
 
@@ -200,7 +194,7 @@ async def get_default_rich_menu(service: RichMenuService = Depends(get_rich_menu
 @router.post("/link")
 async def link_rich_menu(
     request: LinkRichMenuRequest,
-    service: RichMenuService = Depends(get_rich_menu_svc)
+    service = Depends(get_rich_menu_service)
 ):
     """
     Link a rich menu to a specific user
@@ -233,7 +227,7 @@ async def link_rich_menu(
 @router.delete("/unlink/{user_id}")
 async def unlink_rich_menu(
     user_id: str,
-    service: RichMenuService = Depends(get_rich_menu_svc)
+    service = Depends(get_rich_menu_service)
 ):
     """
     Unlink rich menu from a user
@@ -260,7 +254,7 @@ async def unlink_rich_menu(
 @router.delete("/{rich_menu_id}")
 async def delete_rich_menu(
     rich_menu_id: str,
-    service: RichMenuService = Depends(get_rich_menu_svc)
+    service = Depends(get_rich_menu_service)
 ):
     """
     Delete a rich menu

@@ -3,17 +3,11 @@ import logging
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
 
-from services.translation_service import TranslationService
-from services.container import get_container
+from dependencies import get_translation_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/translate", tags=["Translation"])
-
-
-def get_translation_svc() -> TranslationService:
-    """Get translation service from service container"""
-    return get_container().translation_service
 
 
 class TranslationRequest(BaseModel):
@@ -32,7 +26,7 @@ class TranslationResponse(BaseModel):
 @router.post("/", response_model=TranslationResponse)
 async def translate_text(
     request: TranslationRequest,
-    translation_service: TranslationService = Depends(get_translation_svc)
+    translation_service = Depends(get_translation_service)
 ):
     """
     Translate text from one language to another
