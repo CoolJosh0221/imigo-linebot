@@ -220,3 +220,5 @@ models/
 
 # SSL Certificates
 letsencrypt/
+*.db
+database.db
