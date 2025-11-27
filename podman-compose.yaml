@@ -16,7 +16,7 @@ services:
       - MODEL_NAME=${MODEL_NAME:-aisingapore/sealion7b-instruct}
       - DATABASE_URL=sqlite+aiosqlite:///data/database.db
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
-      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-id}
+      - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-en}
     volumes:
       - ./data:/data
       - ./config:/app/config:ro

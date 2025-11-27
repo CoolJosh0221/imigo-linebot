@@ -14,6 +14,8 @@ from linebot.v3.messaging import (
     MarkMessagesAsReadByTokenRequest,
     ReplyMessageRequest,
     TextMessage,
+    FlexMessage,
+    FlexContainer,
     QuickReply,
     QuickReplyItem,
     MessageAction,
@@ -24,7 +26,7 @@ from linebot.v3.webhooks import (
     PostbackEvent,
 )
 
-from config import load_config, get_config
+from config import load_config, get_config, NEW_USER_WELCOME_MESSAGE
 from dependencies import (
     initialize_services,
     cleanup_services,
@@ -35,6 +37,11 @@ from dependencies import (
     get_rich_menu_service,
     get_line_messaging_api,
     get_line_parser,
+)
+from services.flex_messages import (
+    create_new_user_welcome_flex,
+    create_help_flex_message,
+    create_emergency_flex_message,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -107,37 +114,23 @@ async def detect_and_update_language(
     user_id: str, text: str, db_service, language_detection_service, rich_menu_service
 ) -> str:
     """
-    Detect language from text and update user preference if changed.
-    Returns the user's current language.
+    Get user's language preference or None for new users.
 
-    This provides seamless language switching - users can switch languages
-    just by typing in a different language, no commands needed!
+    For existing users, language preference is sticky and only changed
+    via explicit /lang command or rich menu selection.
+
+    For new users, returns None to prompt them to select a language.
     """
     # Get current user language
     current_lang = await db_service.get_user_language(user_id)
 
-    # Detect language from message
-    detected_lang = language_detection_service.detect_language(text)
+    # For existing users, use their saved preference
+    if current_lang:
+        return current_lang
 
-    # If this is a new user or language has changed, update it
-    if not current_lang:
-        # New user - set language and rich menu
-        await db_service.set_user_language(user_id, detected_lang)
-        await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
-        log.info(f"New user {user_id[:8]}: detected language '{detected_lang}'")
-        return detected_lang
-
-    # Check if user is switching languages
-    if detected_lang != current_lang:
-        # Language switched! Update preference and rich menu
-        await db_service.set_user_language(user_id, detected_lang)
-        await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
-        log.info(
-            f"User {user_id[:8]} switched language: '{current_lang}' → '{detected_lang}'"
-        )
-        return detected_lang
-
-    return current_lang
+    # New user - return None to prompt language selection
+    log.info(f"New user {user_id[:8]}: prompting for language selection")
+    return None
 
 
 async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
@@ -163,10 +156,27 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
     except Exception as e:
         log.warning(f"Failed to mark message as read: {e}")
 
-    # Seamless language detection and switching
+    # Get user's language preference (None for new users)
     user_lang = await detect_and_update_language(
         user_id, text, db_service, language_detection_service, rich_menu_service
     )
+
+    # Handle new users - prompt for language selection
+    if user_lang is None:
+        # Show beautiful flex message with language selection buttons
+        flex_content = create_new_user_welcome_flex()
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    FlexMessage(
+                        alt_text="Welcome to IMIGO! Please select your language.",
+                        contents=FlexContainer.from_dict(flex_content)
+                    )
+                ],
+            )
+        )
+        return
 
     # Check if user is explicitly requesting language change via command
     if text.strip().lower().startswith("/lang"):
@@ -174,14 +184,23 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
         if len(parts) == 2:
             lang_code = parts[1].lower()
             if cfg.is_valid_language(lang_code):
+                # Check if this is a first-time language selection
+                is_new_user = user_lang is None
+
                 await db_service.set_user_language(user_id, lang_code)
                 await rich_menu_service.set_user_rich_menu(user_id, lang_code)
-                log.info(f"User {user_id[:8]} manually changed language to {lang_code}")
+                log.info(f"User {user_id[:8]} {'set initial' if is_new_user else 'changed'} language to {lang_code}")
+
+                # Send welcome message for new users, confirmation for existing users
+                if is_new_user:
+                    message_text = cfg.get_message("welcome", lang_code)
+                else:
+                    message_text = cfg.get_message("language_changed", lang_code)
 
                 await line_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=cfg.get_message("language_changed", lang_code))],
+                        messages=[TextMessage(text=message_text)],
                     )
                 )
                 return
@@ -210,19 +229,33 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 
     # Handle other simple commands
     if text.strip().lower() == "/help":
+        # Show help menu with flex message
+        flex_content = create_help_flex_message(user_lang)
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=cfg.get_message("help", user_lang))],
+                messages=[
+                    FlexMessage(
+                        alt_text="IMIGO Help Menu - Select a category",
+                        contents=FlexContainer.from_dict(flex_content)
+                    )
+                ],
             )
         )
         return
 
     if text.strip().lower() == "/emergency":
+        # Show emergency contacts with flex message
+        flex_content = create_emergency_flex_message(user_lang)
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=cfg.get_emergency_info())],
+                messages=[
+                    FlexMessage(
+                        alt_text="Emergency Contacts - Taiwan",
+                        contents=FlexContainer.from_dict(flex_content)
+                    )
+                ],
             )
         )
         return
@@ -302,11 +335,17 @@ async def handle_postback(event: PostbackEvent) -> None:
         )
 
     elif data == "category_emergency":
-        emergency_info = cfg.get_emergency_info()
+        # Show emergency contacts with flex message
+        flex_content = create_emergency_flex_message(user_lang)
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=emergency_info)],
+                messages=[
+                    FlexMessage(
+                        alt_text="Emergency Contacts - Taiwan",
+                        contents=FlexContainer.from_dict(flex_content)
+                    )
+                ],
             )
         )
 
@@ -336,14 +375,24 @@ async def handle_postback(event: PostbackEvent) -> None:
         # Handle language switching via postback
         lang_code = data.split("_")[1]
         if cfg.is_valid_language(lang_code):
+            # Check if this is a first-time language selection
+            current_lang = await db_service.get_user_language(user_id)
+            is_new_user = current_lang is None
+
             await db_service.set_user_language(user_id, lang_code)
             await rich_menu_service.set_user_rich_menu(user_id, lang_code)
-            log.info(f"User {user_id[:8]} changed language to {lang_code} via postback")
+            log.info(f"User {user_id[:8]} {'set initial' if is_new_user else 'changed'} language to {lang_code} via postback")
+
+            # Send welcome message for new users, confirmation for existing users
+            if is_new_user:
+                message_text = cfg.get_message("welcome", lang_code)
+            else:
+                message_text = cfg.get_message("language_changed", lang_code)
 
             await line_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text=cfg.get_message("language_changed", lang_code))],
+                    messages=[TextMessage(text=message_text)],
                 )
             )
 

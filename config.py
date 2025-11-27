@@ -147,6 +147,21 @@ EMERGENCY_CONTACTS = {
     "anti_trafficking_hotline": "113",
 }
 
+# Multi-language welcome message for new users (shown in all languages)
+NEW_USER_WELCOME_MESSAGE = """👋 Welcome to IMIGO! / 歡迎使用 IMIGO！/ Selamat datang di IMIGO! / Chào mừng đến với IMIGO!
+
+🌐 Please select your preferred language:
+請選擇您的語言：
+Silakan pilih bahasa Anda:
+Vui lòng chọn ngôn ngữ của bạn:
+
+🇬🇧 English
+🇹🇼 繁體中文 (Traditional Chinese)
+🇮🇩 Bahasa Indonesia
+🇻🇳 Tiếng Việt
+
+Type /lang to see all language options."""
+
 
 class BotConfig:
     """Configuration class for IMIGO LINE Bot"""
@@ -155,7 +170,7 @@ class BotConfig:
         load_dotenv()
 
         # Bot identity
-        self.language = self._get_env_with_default("DEFAULT_LANGUAGE", "id")
+        self.language = self._get_env_with_default("DEFAULT_LANGUAGE", "en")
         self.name = "IMIGO"
         self.country = "tw"
 
