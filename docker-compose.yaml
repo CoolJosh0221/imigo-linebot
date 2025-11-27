@@ -12,11 +12,9 @@ services:
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
       - LLM_BASE_URL=http://vllm:8000/v1
       - MODEL_NAME=${MODEL_NAME:-aisingapore/sealion7b-instruct}
-      - DATABASE_URL=sqlite+aiosqlite:///data/database.db
+      - DATABASE_URL=sqlite+aiosqlite:///database.db
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
       - DEFAULT_LANGUAGE=${DEFAULT_LANGUAGE:-id}
-    volumes:
-      - ./data:/data
     depends_on:
       vllm:
         condition: service_healthy
@@ -34,12 +32,14 @@ services:
       - ~/.cache/huggingface:/root/.cache/huggingface
     command:
       - "--model"
-      - "aisingapore/Gemma-SEA-LION-v4-27B-IT-NVFP4"
+      - "aisingapore/Qwen-SEA-LION-v4-32B-IT-4BIT"
+      - "--dtype"
+      - "float16"
       - "--gpu-memory-utilization"
-      - "0.85"
+      - "0.93"
       - "--max-model-len"
-      - "8192"
-      - "--trust-remote-code"
+      - "4096"
+      - "--enforce-eager"
       - "--port"
       - "8000"
     environment:
@@ -52,7 +52,7 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    shm_size: '8gb'
+    shm_size: '16gb'
     ipc: host
     restart: unless-stopped
     healthcheck:
@@ -60,7 +60,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 120s # Increased because 27B models take longer to load
+      start_period: 120s
     networks:
       - bot-network
 

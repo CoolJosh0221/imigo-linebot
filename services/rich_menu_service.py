@@ -7,6 +7,7 @@ import os
 
 from linebot.v3.messaging import (
     AsyncMessagingApi,
+    AsyncMessagingApiBlob,
     RichMenuRequest,
     RichMenuSize,
     RichMenuArea,

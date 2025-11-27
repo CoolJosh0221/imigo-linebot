@@ -31,10 +31,10 @@ ENV/
 !.env.example
 
 # Database
-*.db
-database.db
-*.sqlite
-*.sqlite3
+# *.db
+# database.db
+# *.sqlite
+# *.sqlite3
 
 # Logs
 *.log
@@ -49,9 +49,6 @@ podman-compose*.yaml
 # Models (will be mounted as volume)
 models/
 sealion-model/
-
-# Data (will be mounted as volume)
-data/
 
 # Documentation
 *.md
