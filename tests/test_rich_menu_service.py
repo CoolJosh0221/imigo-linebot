@@ -15,9 +15,14 @@ class TestRichMenuService:
         return AsyncMock()
 
     @pytest.fixture
-    def rich_menu_service(self, mock_line_api):
+    def mock_blob_api(self):
+        """Create a mock LINE Blob API"""
+        return AsyncMock()
+
+    @pytest.fixture
+    def rich_menu_service(self, mock_line_api, mock_blob_api):
         """Create a rich menu service with mock API"""
-        return RichMenuService(mock_line_api)
+        return RichMenuService(mock_line_api, mock_blob_api)
 
     def test_initialization(self, rich_menu_service):
         """Test service initialization"""
@@ -154,36 +159,36 @@ class TestRichMenuService:
         mock_line_api.delete_rich_menu.assert_called_once_with(rich_menu_id)
 
     @pytest.mark.asyncio
-    async def test_upload_rich_menu_image_success(self, rich_menu_service, mock_line_api, tmp_path):
+    async def test_upload_rich_menu_image_success(self, rich_menu_service, mock_blob_api, tmp_path):
         """Test successful image upload for rich menu"""
         rich_menu_id = "test_rich_menu_id"
         image_path = tmp_path / "test_image.png"
         image_path.write_bytes(b"test_image_content")
 
-        mock_line_api.upload_rich_menu_image = AsyncMock(return_value=None)
+        mock_blob_api.set_rich_menu_image = AsyncMock(return_value=None)
 
         result = await rich_menu_service.upload_rich_menu_image(rich_menu_id, str(image_path))
 
         assert result is True
-        mock_line_api.upload_rich_menu_image.assert_called_once()
-        args, kwargs = mock_line_api.upload_rich_menu_image.call_args
+        mock_blob_api.set_rich_menu_image.assert_called_once()
+        args, kwargs = mock_blob_api.set_rich_menu_image.call_args
         assert kwargs["rich_menu_id"] == rich_menu_id
         assert kwargs["body"] == b"test_image_content"
         assert kwargs["content_type"] == "image/png"
 
     @pytest.mark.asyncio
-    async def test_upload_rich_menu_image_failure(self, rich_menu_service, mock_line_api, tmp_path):
+    async def test_upload_rich_menu_image_failure(self, rich_menu_service, mock_blob_api, tmp_path):
         """Test image upload failure for rich menu"""
         rich_menu_id = "test_rich_menu_id"
         image_path = tmp_path / "test_image.png"
         image_path.write_bytes(b"test_image_content")
 
-        mock_line_api.upload_rich_menu_image = AsyncMock(side_effect=Exception("Upload error"))
+        mock_blob_api.set_rich_menu_image = AsyncMock(side_effect=Exception("Upload error"))
 
         result = await rich_menu_service.upload_rich_menu_image(rich_menu_id, str(image_path))
 
         assert result is False
-        mock_line_api.upload_rich_menu_image.assert_called_once()
+        mock_blob_api.set_rich_menu_image.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_create_rich_menu_for_language_success(self, rich_menu_service, mock_line_api, project_root):
@@ -209,7 +214,7 @@ class TestRichMenuService:
         assert kwargs['rich_menu_request'].name == menu_name
         
     @pytest.mark.asyncio
-    async def test_create_language_rich_menus_success(self, rich_menu_service, mock_line_api, project_root, tmp_path):
+    async def test_create_language_rich_menus_success(self, rich_menu_service, mock_line_api, mock_blob_api, project_root, tmp_path):
         """Test successful creation of rich menus for all languages"""
         # Create dummy image files for the test
         rich_menu_service.rich_menu_dir = tmp_path
@@ -229,8 +234,8 @@ class TestRichMenuService:
             MagicMock(rich_menu_id="richmenu-zh"),
         ]
 
-        # Mock upload_rich_menu_image to always succeed
-        mock_line_api.upload_rich_menu_image.return_value = None
+        # Mock set_rich_menu_image to always succeed
+        mock_blob_api.set_rich_menu_image.return_value = None
 
         # Ensure the config file exists for the test
         rich_menu_service.config_path = project_root / "rich_menu" / "menu_config.json"
@@ -245,6 +250,6 @@ class TestRichMenuService:
         assert result_menus["zh"] == "richmenu-zh"
 
         assert mock_line_api.create_rich_menu.call_count == 4
-        assert mock_line_api.upload_rich_menu_image.call_count == 4
+        assert mock_blob_api.set_rich_menu_image.call_count == 4
         
 

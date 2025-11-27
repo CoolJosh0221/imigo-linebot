@@ -24,8 +24,9 @@ logger = logging.getLogger(__name__)
 class RichMenuService:
     """Service to manage LINE rich menus"""
 
-    def __init__(self, line_api: AsyncMessagingApi):
+    def __init__(self, line_api: AsyncMessagingApi, blob_api: AsyncMessagingApiBlob):
         self.line_api = line_api
+        self.blob_api = blob_api
         self.config_path = Path(__file__).parent.parent / "rich_menu" / "menu_config.json"
         self.rich_menu_dir = Path(__file__).parent.parent / "rich_menu"
         # Store rich menu IDs for each language
@@ -164,10 +165,10 @@ class RichMenuService:
                 content_type = "image/jpeg"
 
             with open(validated_path, "rb") as f:
-                await self.line_api.upload_rich_menu_image(
+                await self.blob_api.set_rich_menu_image(
                     rich_menu_id=rich_menu_id,
                     body=f.read(),
-                    content_type=content_type,
+                    _headers={"Content-Type": content_type},
                 )
             logger.info(f"Uploaded image to rich menu: {rich_menu_id}")
             return True

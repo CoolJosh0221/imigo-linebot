@@ -8,7 +8,7 @@ import logging
 from typing import Optional
 from functools import lru_cache
 
-from linebot.v3.messaging import AsyncMessagingApi, AsyncApiClient, Configuration
+from linebot.v3.messaging import AsyncMessagingApi, AsyncMessagingApiBlob, AsyncApiClient, Configuration
 from linebot.v3.webhook import WebhookParser
 
 from config import BotConfig, get_config
@@ -27,6 +27,7 @@ _translation_service: Optional[TranslationService] = None
 _language_detection_service: Optional[LanguageDetectionService] = None
 _rich_menu_service: Optional[RichMenuService] = None
 _line_messaging_api: Optional[AsyncMessagingApi] = None
+_line_messaging_api_blob: Optional[AsyncMessagingApiBlob] = None
 _line_parser: Optional[WebhookParser] = None
 _line_async_client: Optional[AsyncApiClient] = None
 
@@ -77,14 +78,24 @@ async def get_language_detection_service() -> LanguageDetectionService:
 
 async def get_line_messaging_api() -> AsyncMessagingApi:
     """Get or create LINE messaging API instance"""
-    global _line_messaging_api, _line_async_client
+    global _line_messaging_api, _line_messaging_api_blob, _line_async_client
     if _line_messaging_api is None:
         config = get_config()
         line_config = Configuration(access_token=config.line_token)
         _line_async_client = AsyncApiClient(line_config)
         _line_messaging_api = AsyncMessagingApi(_line_async_client)
+        _line_messaging_api_blob = AsyncMessagingApiBlob(_line_async_client)
         logger.info("LINE messaging API initialized")
     return _line_messaging_api
+
+
+async def get_line_messaging_api_blob() -> AsyncMessagingApiBlob:
+    """Get or create LINE messaging API blob instance"""
+    global _line_messaging_api_blob
+    if _line_messaging_api_blob is None:
+        # Initialize messaging API first (which also initializes blob API)
+        await get_line_messaging_api()
+    return _line_messaging_api_blob
 
 
 async def get_rich_menu_service() -> RichMenuService:
@@ -92,7 +103,8 @@ async def get_rich_menu_service() -> RichMenuService:
     global _rich_menu_service
     if _rich_menu_service is None:
         line_api = await get_line_messaging_api()
-        _rich_menu_service = RichMenuService(line_api)
+        blob_api = await get_line_messaging_api_blob()
+        _rich_menu_service = RichMenuService(line_api, blob_api)
         logger.info("Rich menu service initialized")
     return _rich_menu_service
 
@@ -141,7 +153,7 @@ async def initialize_services():
 async def cleanup_services():
     """Clean up all services on application shutdown"""
     global _ai_service, _translation_service, _db_service, _line_async_client
-    global _rich_menu_service, _language_detection_service, _line_messaging_api, _line_parser
+    global _rich_menu_service, _language_detection_service, _line_messaging_api, _line_messaging_api_blob, _line_parser
 
     logger.info("Cleaning up services...")
 
@@ -182,6 +194,7 @@ async def cleanup_services():
     _language_detection_service = None
     _rich_menu_service = None
     _line_messaging_api = None
+    _line_messaging_api_blob = None
     _line_parser = None
     _line_async_client = None
 
