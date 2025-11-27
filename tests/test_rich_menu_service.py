@@ -152,3 +152,99 @@ class TestRichMenuService:
 
         assert result is True
         mock_line_api.delete_rich_menu.assert_called_once_with(rich_menu_id)
+
+    @pytest.mark.asyncio
+    async def test_upload_rich_menu_image_success(self, rich_menu_service, mock_line_api, tmp_path):
+        """Test successful image upload for rich menu"""
+        rich_menu_id = "test_rich_menu_id"
+        image_path = tmp_path / "test_image.png"
+        image_path.write_bytes(b"test_image_content")
+
+        mock_line_api.upload_rich_menu_image = AsyncMock(return_value=None)
+
+        result = await rich_menu_service.upload_rich_menu_image(rich_menu_id, str(image_path))
+
+        assert result is True
+        mock_line_api.upload_rich_menu_image.assert_called_once()
+        args, kwargs = mock_line_api.upload_rich_menu_image.call_args
+        assert kwargs["rich_menu_id"] == rich_menu_id
+        assert kwargs["body"] == b"test_image_content"
+        assert kwargs["content_type"] == "image/png"
+
+    @pytest.mark.asyncio
+    async def test_upload_rich_menu_image_failure(self, rich_menu_service, mock_line_api, tmp_path):
+        """Test image upload failure for rich menu"""
+        rich_menu_id = "test_rich_menu_id"
+        image_path = tmp_path / "test_image.png"
+        image_path.write_bytes(b"test_image_content")
+
+        mock_line_api.upload_rich_menu_image = AsyncMock(side_effect=Exception("Upload error"))
+
+        result = await rich_menu_service.upload_rich_menu_image(rich_menu_id, str(image_path))
+
+        assert result is False
+        mock_line_api.upload_rich_menu_image.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_create_rich_menu_for_language_success(self, rich_menu_service, mock_line_api, project_root):
+        """Test successful creation of rich menu for a specific language"""
+        language = "en"
+        menu_name = "English Menu"
+        mock_rich_menu_id = "richmenu-test-en"
+
+        # Mock the create_rich_menu response
+        mock_response = MagicMock()
+        mock_response.rich_menu_id = mock_rich_menu_id
+        mock_line_api.create_rich_menu.return_value = mock_response
+
+        # Ensure the config file exists for the test
+        rich_menu_service.config_path = project_root / "rich_menu" / "menu_config.json"
+        assert rich_menu_service.config_path.exists()
+
+        result_id = await rich_menu_service.create_rich_menu_for_language(language, menu_name)
+
+        assert result_id == mock_rich_menu_id
+        mock_line_api.create_rich_menu.assert_called_once()
+        args, kwargs = mock_line_api.create_rich_menu.call_args
+        assert kwargs['rich_menu_request'].name == menu_name
+        
+    @pytest.mark.asyncio
+    async def test_create_language_rich_menus_success(self, rich_menu_service, mock_line_api, project_root, tmp_path):
+        """Test successful creation of rich menus for all languages"""
+        # Create dummy image files for the test
+        rich_menu_service.rich_menu_dir = tmp_path
+        (tmp_path / "menu_en.png").write_bytes(b"en_img")
+        (tmp_path / "menu_id.png").write_bytes(b"id_img")
+        (tmp_path / "menu_vi.png").write_bytes(b"vi_img")
+        (tmp_path / "menu_zh.png").write_bytes(b"zh_img")
+
+        # Mock existing menus to be empty initially
+        mock_line_api.get_rich_menu_list.return_value = MagicMock(richmenus=[])
+
+        # Mock create_rich_menu to return distinct rich_menu_ids
+        mock_line_api.create_rich_menu.side_effect = [
+            MagicMock(rich_menu_id="richmenu-en"),
+            MagicMock(rich_menu_id="richmenu-id"),
+            MagicMock(rich_menu_id="richmenu-vi"),
+            MagicMock(rich_menu_id="richmenu-zh"),
+        ]
+
+        # Mock upload_rich_menu_image to always succeed
+        mock_line_api.upload_rich_menu_image.return_value = None
+
+        # Ensure the config file exists for the test
+        rich_menu_service.config_path = project_root / "rich_menu" / "menu_config.json"
+        assert rich_menu_service.config_path.exists()
+
+        result_menus = await rich_menu_service.create_language_rich_menus()
+
+        assert len(result_menus) == 4
+        assert result_menus["en"] == "richmenu-en"
+        assert result_menus["id"] == "richmenu-id"
+        assert result_menus["vi"] == "richmenu-vi"
+        assert result_menus["zh"] == "richmenu-zh"
+
+        assert mock_line_api.create_rich_menu.call_count == 4
+        assert mock_line_api.upload_rich_menu_image.call_count == 4
+        
+

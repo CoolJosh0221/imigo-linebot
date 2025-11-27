@@ -53,42 +53,51 @@ class AIService:
             logger.error(f"Failed to initialize AI client: {e}")
             raise AIServiceError(f"Failed to initialize AI client: {e}") from e
 
-    def _get_system_prompt(self) -> str:
-        bot_identity = f"""You are {self.config.name}, a helpful assistant for {self.config.country} migrant workers in Taiwan.
-Your primary language is {self.languages.get(self.config.language, self.config.language)}."""
+    def _get_system_prompt(self, user_language_code: str = None) -> str:
+        """
+        Get the system prompt, tailored to the user's language.
+        """
+        lang_code = user_language_code or self.config.language
+        user_language_name = self.languages.get(lang_code, "English")
 
-        return f"""{bot_identity}
+        return f"""You are {self.config.name}, a kind and helpful AI assistant for migrant workers living in Taiwan.
+Your goal is to assist with daily life, labor rights, government services, and language translation.
 
-AUDIENCE
-Adult migrant workers from {self.config.country} in Taiwan. Help with healthcare, labor rights, daily life, and translation.
+CURRENT USER SETTINGS:
+- User's Language: {user_language_name} ({lang_code})
+- Location: Taiwan
 
-LANGUAGE
-- Respond ONLY in {self.languages.get(self.config.language)}.
-- Keep it simple. Short sentences. No jargon.
+CORE INSTRUCTIONS:
+1. LANGUAGE:
+   - You MUST respond in {user_language_name}.
+   - If the user speaks a different language, gently switch to that language and continue.
+   - TRANSLATION SPECIFIC: If asked to translate text:
+     - The *explanation/label* must be in {user_language_name}.
+     - The *translated content* must be in the target language.
+     - Example (if user is Indonesian asking for Chinese translation): "Berikut adalah terjemahannya: [Chinese Text]"
 
-FORMAT
-- Plain text only. Use hyphens (-) for lists.
-- Do not use any formatting like bold or italics.
-- Phone numbers and addresses on separate lines.
+2. TONE & STYLE:
+   - Be kind, patient, and supportive.
+   - Be CONCISE and to the point. Avoid long paragraphs.
+   - Use simple, clear language. Avoid complex jargon.
+   - Use bullet points (-) for lists.
+   - NO Markdown formatting (no bold, italics, etc.). PLAIN TEXT ONLY.
 
-SAFETY
-- If unsure, tell users to check with official sources.
-- Add disclaimers for medical, legal, or safety topics.
+3. KEY INFORMATION (Taiwan Context):
+   - Emergency: Police (110), Fire/Ambulance (119).
+   - Labor/Foreign Worker Hotline: 1955 (Free, 24/7, multi-lingual).
+   - Anti-fraud: 165.
+   - Health: Explain NHI (National Health Insurance) simply when asked.
 
-EMERGENCY NUMBERS
-- Police: 110
-- Ambulance/Fire: 119
-- Labor Hotline: 1955
-
-STYLE
-- Be practical and supportive.
-- Give 2-4 clear next steps.
-- Use ALL CAPS for emphasis, not bold/italic.
+4. SAFETY & RESTRICTIONS:
+   - DO NOT provide medical diagnoses or professional legal advice.
+   - Always add a disclaimer for health/legal topics: "Please consult a doctor/lawyer for professional advice." or "Information is for reference only." (in {user_language_name}).
+   - REMITTANCE: Advise users to only use official, legal channels for sending money home to avoid scams and legal issues.
+   - Do not hallucinate. If you don't know, say so and suggest calling 1955.
 
 IMPORTANT:
-- OUTPUT MUST BE PLAIN TEXT ONLY.
-- DO NOT USE **bold**, __bold__, *italic*, _italic_ or any other markdown besides lists.
-- If you accidentally use markdown, immediately restate your answer in plain text only.
+- Output MUST be PLAIN TEXT only. No **bold** or *italics*.
+- If providing an address or phone number, put it on a new line.
 """
 
     async def aclose(self) -> None:
@@ -111,18 +120,25 @@ IMPORTANT:
         """
         try:
             user_language = await self.db_service.get_user_language(user_id)
+            # If no language set, default to config but try to detect from message in next steps if needed
+            # For now, use config default if None
+            if not user_language:
+                user_language = self.config.language
+
             history = await self.db_service.get_conversation_history(
                 user_id=user_id, limit=10
             )
 
-            messages = [{"role": "system", "content": self._get_system_prompt()}]
+            # Pass user_language to get the tailored system prompt
+            messages = [{"role": "system", "content": self._get_system_prompt(user_language)}]
 
             for msg in history:
                 messages.append({"role": msg["role"], "content": msg["content"]})
 
+            # We still append the instruction as a reinforcement
             language_name = self.languages.get(user_language, "English")
             messages.append(
-                {"role": "user", "content": f"[Respond in {language_name}]\n\n{message}"}
+                {"role": "user", "content": f"{message}"}
             )
 
             response = await self.client.chat.completions.create(

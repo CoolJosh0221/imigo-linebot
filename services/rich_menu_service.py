@@ -162,10 +162,10 @@ class RichMenuService:
                 content_type = "image/jpeg"
 
             with open(validated_path, "rb") as f:
-                await self.line_api.set_rich_menu_image(
+                await self.line_api.upload_rich_menu_image(
                     rich_menu_id=rich_menu_id,
                     body=f.read(),
-                    _headers={"Content-Type": content_type},
+                    content_type=content_type,
                 )
             logger.info(f"Uploaded image to rich menu: {rich_menu_id}")
             return True
