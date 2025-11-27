@@ -1,5 +1,7 @@
 from __future__ import annotations
 import logging
+import os
+from pathlib import Path
 from datetime import datetime, timedelta
 from typing import Optional
 from sqlalchemy import delete, select
@@ -16,6 +18,18 @@ class DatabaseService:
         self, db_url: str = "sqlite+aiosqlite:///database.db", echo: bool = False
     ):
         self.db_url = db_url
+
+        # Ensure database directory exists for SQLite databases
+        if db_url.startswith("sqlite"):
+            # Extract the file path from the URL
+            # Format: sqlite+aiosqlite:///path/to/database.db
+            db_path = db_url.split("///")[-1] if "///" in db_url else None
+            if db_path and db_path != ":memory:":
+                # Create parent directory if it doesn't exist
+                db_file = Path(db_path)
+                db_file.parent.mkdir(parents=True, exist_ok=True)
+                log.info(f"Ensured database directory exists: {db_file.parent}")
+
         self.engine = create_async_engine(url=db_url, echo=echo)
         self.Session: async_sessionmaker[AsyncSession] = async_sessionmaker(
             self.engine, expire_on_commit=False
