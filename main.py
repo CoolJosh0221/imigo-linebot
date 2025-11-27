@@ -168,6 +168,23 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 
     cmd = text.strip().lower()
 
+    # Check if text is a language name - usability enhancement
+    lang_map = {
+        "bahasa indonesia": "id",
+        "indonesia": "id",
+        "indonesian": "id",
+        "中文": "zh",
+        "繁體中文": "zh",
+        "chinese": "zh",
+        "english": "en",
+        "tiếng việt": "vi",
+        "vietnamese": "vi",
+        "vietnam": "vi"
+    }
+    if cmd in lang_map:
+        text = f"/lang {lang_map[cmd]}"
+        cmd = text.strip().lower()
+
     # Handle language selection first (works for both new and existing users)
     if cmd.startswith("/lang"):
         parts = text.strip().split()

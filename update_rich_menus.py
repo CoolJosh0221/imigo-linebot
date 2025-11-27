@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import Dict, List
 
+from config import load_config
 from dependencies import (
     get_rich_menu_service,
     get_database_service,
@@ -26,6 +27,7 @@ class RichMenuUpdater:
 
     async def initialize(self):
         """Initialize services"""
+        load_config()
         await initialize_services()
         self.rich_menu_service = await get_rich_menu_service()
         self.db_service = await get_database_service()

@@ -32,12 +32,12 @@ class AIService:
     def __init__(self, db_service: DatabaseService, config: BotConfig):
         self.db_service = db_service
         self.config = config
-        self.model_name = os.getenv("MODEL_NAME", "aisingapore/Llama-SEA-LION-v3.5-8B-R")
+        self.model_name = config.model_name
         self.client = self._init_client()
 
     def _init_client(self) -> AsyncOpenAI:
         try:
-            base_url = os.getenv("LLM_BASE_URL")
+            base_url = self.config.llm_base_url
             api_key = os.getenv("LLM_API_KEY", "dummy-key")
 
             if not base_url:

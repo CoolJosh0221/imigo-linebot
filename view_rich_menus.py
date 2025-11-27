@@ -5,6 +5,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+from config import load_config
 from dependencies import (
     get_rich_menu_service,
     initialize_services,
@@ -21,6 +22,7 @@ logger = logging.getLogger(__name__)
 async def view_menus(show_details: bool = False, export: bool = False):
     """View all rich menus"""
     try:
+        load_config()
         await initialize_services()
         rich_menu_service = await get_rich_menu_service()
 

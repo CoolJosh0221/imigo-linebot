@@ -10,7 +10,7 @@ MESSAGES = {
     "id": {
         "welcome": """👋 Selamat datang di IMIGO!
 
-Saya adalah asisten AI untuk membantu pekerja migran Indonesia di Taiwan.
+Saya adalah asisten AI untuk membantu pekerja migran di Taiwan.
 
 Saya dapat membantu dengan:
 • Informasi ketenagakerjaan
@@ -22,7 +22,8 @@ Saya dapat membantu dengan:
 Silakan ajukan pertanyaan Anda!""",
         "cleared": "✅ Riwayat percakapan telah dihapus.\nAnda dapat memulai percakapan baru!",
         "language_changed": "✅ Bahasa telah diubah ke Bahasa Indonesia.\nSaya sekarang akan merespons dalam bahasa Indonesia!",
-        "language_select": "🌐 Pilih bahasa Anda:\nKetik: /lang id (Indonesia)\n/lang zh (中文)\n/lang en (English)",
+        # Added /lang vi to be consistent with other keys
+        "language_select": "🌐 Pilih bahasa Anda:\nKetik: /lang id (Indonesia)\n/lang zh (中文)\n/lang en (English)\n/lang vi (Tiếng Việt)",
         "help": """🤖 Cara menggunakan IMIGO:
 
 Ketik pertanyaan Anda dalam bahasa apa pun, dan saya akan membantu!
@@ -36,9 +37,10 @@ Kategori bantuan:
 • 🚨 Kontak darurat""",
     },
     "zh": {
+        # Changed "Indonesian migrant workers" to just "migrant workers" to match the inclusion of Vietnamese
         "welcome": """👋 歡迎使用 IMIGO！
 
-我是協助在台灣的印尼移工的 AI 助手。
+我是協助在台灣的外籍移工的 AI 助手。
 
 我可以幫助您：
 • 勞工資訊
@@ -50,7 +52,8 @@ Kategori bantuan:
 請隨時提出您的問題！""",
         "cleared": "✅ 對話記錄已清除。\n您可以開始新的對話！",
         "language_changed": "✅ 語言已更改為繁體中文。\n我現在將用中文回應！",
-        "language_select": "🌐 選擇您的語言：\n輸入: /lang id (印尼文)\n/lang zh (中文)\n/lang en (英文)",
+        # Added /lang vi to be consistent with other keys
+        "language_select": "🌐 選擇您的語言：\n輸入: /lang id (印尼文)\n/lang zh (中文)\n/lang en (英文)\n/lang vi (越南文)",
         "help": """🤖 如何使用 IMIGO：
 
 用任何語言輸入您的問題，我會幫助您！
@@ -64,9 +67,10 @@ Kategori bantuan:
 • 🚨 緊急聯絡""",
     },
     "en": {
+        # Removed "Indonesian" to make it consistent with the existence of the Vietnamese option
         "welcome": """👋 Welcome to IMIGO!
 
-I'm an AI assistant to help Indonesian migrant workers in Taiwan.
+I'm an AI assistant to help migrant workers in Taiwan.
 
 I can help with:
 • Labor information
@@ -187,10 +191,10 @@ class BotConfig:
 
         # LLM configuration
         self.llm_base_url = self._get_env_with_default(
-            "LLM_BASE_URL", "http://localhost:8000/v1"
+            "LLM_BASE_URL", "http://localhost:8001/v1"
         )
         self.model_name = self._get_env_with_default(
-            "MODEL_NAME", "aisingapore/sealion7b-instruct"
+            "MODEL_NAME", "aisingapore/Qwen-SEA-LION-v4-32B-IT-4BIT"
         )
 
         # Database

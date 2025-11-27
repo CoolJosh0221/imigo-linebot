@@ -3,6 +3,7 @@ import argparse
 import logging
 import sys
 
+from config import load_config
 from dependencies import (
     get_rich_menu_service,
     get_database_service,
@@ -20,6 +21,7 @@ logger = logging.getLogger(__name__)
 async def link_user_menu(user_id: str, language: str) -> bool:
     """Link a rich menu to a specific user"""
     try:
+        load_config()
         await initialize_services()
         rich_menu_service = await get_rich_menu_service()
         db_service = await get_database_service()
@@ -62,6 +64,7 @@ async def link_user_menu(user_id: str, language: str) -> bool:
 async def relink_all_users() -> bool:
     """Relink all users in the database to their language-specific menus"""
     try:
+        load_config()
         await initialize_services()
         rich_menu_service = await get_rich_menu_service()
         db_service = await get_database_service()
