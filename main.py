@@ -24,7 +24,7 @@ from linebot.v3.webhooks import (
     PostbackEvent,
 )
 
-from config import load_config, get_config
+from config import load_config, get_config, NEW_USER_WELCOME_MESSAGE
 from dependencies import (
     initialize_services,
     cleanup_services,
@@ -107,11 +107,12 @@ async def detect_and_update_language(
     user_id: str, text: str, db_service, language_detection_service, rich_menu_service
 ) -> str:
     """
-    Detect language for new users only.
-    Returns the user's current language.
+    Get user's language preference or None for new users.
 
     For existing users, language preference is sticky and only changed
     via explicit /lang command or rich menu selection.
+
+    For new users, returns None to prompt them to select a language.
     """
     # Get current user language
     current_lang = await db_service.get_user_language(user_id)
@@ -120,12 +121,9 @@ async def detect_and_update_language(
     if current_lang:
         return current_lang
 
-    # New user - detect language and set up their profile
-    detected_lang = language_detection_service.detect_language(text)
-    await db_service.set_user_language(user_id, detected_lang)
-    await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
-    log.info(f"New user {user_id[:8]}: detected language '{detected_lang}'")
-    return detected_lang
+    # New user - return None to prompt language selection
+    log.info(f"New user {user_id[:8]}: prompting for language selection")
+    return None
 
 
 async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
@@ -151,10 +149,34 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
     except Exception as e:
         log.warning(f"Failed to mark message as read: {e}")
 
-    # Seamless language detection and switching
+    # Get user's language preference (None for new users)
     user_lang = await detect_and_update_language(
         user_id, text, db_service, language_detection_service, rich_menu_service
     )
+
+    # Handle new users - prompt for language selection
+    if user_lang is None:
+        # Show multi-language welcome message with quick reply buttons
+        quick_reply = QuickReply(
+            items=[
+                QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
+                QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
+                QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
+                QuickReplyItem(action=MessageAction(label="🇻🇳 Tiếng Việt", text="/lang vi")),
+            ]
+        )
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    TextMessage(
+                        text=NEW_USER_WELCOME_MESSAGE,
+                        quick_reply=quick_reply,
+                    )
+                ],
+            )
+        )
+        return
 
     # Check if user is explicitly requesting language change via command
     if text.strip().lower().startswith("/lang"):
@@ -162,14 +184,23 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
         if len(parts) == 2:
             lang_code = parts[1].lower()
             if cfg.is_valid_language(lang_code):
+                # Check if this is a first-time language selection
+                is_new_user = user_lang is None
+
                 await db_service.set_user_language(user_id, lang_code)
                 await rich_menu_service.set_user_rich_menu(user_id, lang_code)
-                log.info(f"User {user_id[:8]} manually changed language to {lang_code}")
+                log.info(f"User {user_id[:8]} {'set initial' if is_new_user else 'changed'} language to {lang_code}")
+
+                # Send welcome message for new users, confirmation for existing users
+                if is_new_user:
+                    message_text = cfg.get_message("welcome", lang_code)
+                else:
+                    message_text = cfg.get_message("language_changed", lang_code)
 
                 await line_api.reply_message(
                     ReplyMessageRequest(
                         reply_token=event.reply_token,
-                        messages=[TextMessage(text=cfg.get_message("language_changed", lang_code))],
+                        messages=[TextMessage(text=message_text)],
                     )
                 )
                 return
@@ -324,14 +355,24 @@ async def handle_postback(event: PostbackEvent) -> None:
         # Handle language switching via postback
         lang_code = data.split("_")[1]
         if cfg.is_valid_language(lang_code):
+            # Check if this is a first-time language selection
+            current_lang = await db_service.get_user_language(user_id)
+            is_new_user = current_lang is None
+
             await db_service.set_user_language(user_id, lang_code)
             await rich_menu_service.set_user_rich_menu(user_id, lang_code)
-            log.info(f"User {user_id[:8]} changed language to {lang_code} via postback")
+            log.info(f"User {user_id[:8]} {'set initial' if is_new_user else 'changed'} language to {lang_code} via postback")
+
+            # Send welcome message for new users, confirmation for existing users
+            if is_new_user:
+                message_text = cfg.get_message("welcome", lang_code)
+            else:
+                message_text = cfg.get_message("language_changed", lang_code)
 
             await line_api.reply_message(
                 ReplyMessageRequest(
                     reply_token=event.reply_token,
-                    messages=[TextMessage(text=cfg.get_message("language_changed", lang_code))],
+                    messages=[TextMessage(text=message_text)],
                 )
             )
 
