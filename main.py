@@ -107,37 +107,25 @@ async def detect_and_update_language(
     user_id: str, text: str, db_service, language_detection_service, rich_menu_service
 ) -> str:
     """
-    Detect language from text and update user preference if changed.
+    Detect language for new users only.
     Returns the user's current language.
 
-    This provides seamless language switching - users can switch languages
-    just by typing in a different language, no commands needed!
+    For existing users, language preference is sticky and only changed
+    via explicit /lang command or rich menu selection.
     """
     # Get current user language
     current_lang = await db_service.get_user_language(user_id)
 
-    # Detect language from message
+    # For existing users, use their saved preference
+    if current_lang:
+        return current_lang
+
+    # New user - detect language and set up their profile
     detected_lang = language_detection_service.detect_language(text)
-
-    # If this is a new user or language has changed, update it
-    if not current_lang:
-        # New user - set language and rich menu
-        await db_service.set_user_language(user_id, detected_lang)
-        await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
-        log.info(f"New user {user_id[:8]}: detected language '{detected_lang}'")
-        return detected_lang
-
-    # Check if user is switching languages
-    if detected_lang != current_lang:
-        # Language switched! Update preference and rich menu
-        await db_service.set_user_language(user_id, detected_lang)
-        await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
-        log.info(
-            f"User {user_id[:8]} switched language: '{current_lang}' → '{detected_lang}'"
-        )
-        return detected_lang
-
-    return current_lang
+    await db_service.set_user_language(user_id, detected_lang)
+    await rich_menu_service.set_user_rich_menu(user_id, detected_lang)
+    log.info(f"New user {user_id[:8]}: detected language '{detected_lang}'")
+    return detected_lang
 
 
 async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:

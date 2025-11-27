@@ -155,7 +155,7 @@ class BotConfig:
         load_dotenv()
 
         # Bot identity
-        self.language = self._get_env_with_default("DEFAULT_LANGUAGE", "id")
+        self.language = self._get_env_with_default("DEFAULT_LANGUAGE", "en")
         self.name = "IMIGO"
         self.country = "tw"
 

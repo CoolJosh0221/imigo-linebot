@@ -27,9 +27,9 @@ class LanguageDetectionService:
     SUPPORTED_LANGUAGES = {"en", "zh", "id", "vi", "th", "fil"}
 
     # Default language if detection fails or language is not supported
-    DEFAULT_LANGUAGE = "id"
+    DEFAULT_LANGUAGE = "en"
 
-    def __init__(self, default_language: str = "id"):
+    def __init__(self, default_language: str = "en"):
         """
         Initialize language detection service
 
@@ -39,9 +39,9 @@ class LanguageDetectionService:
         self.default_language = default_language
         if default_language not in self.SUPPORTED_LANGUAGES:
             logger.warning(
-                f"Default language '{default_language}' not supported, using 'id'"
+                f"Default language '{default_language}' not supported, using 'en'"
             )
-            self.default_language = "id"
+            self.default_language = "en"
 
     def detect_language(self, text: str) -> str:
         """
