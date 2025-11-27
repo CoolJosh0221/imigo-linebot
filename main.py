@@ -14,6 +14,8 @@ from linebot.v3.messaging import (
     MarkMessagesAsReadByTokenRequest,
     ReplyMessageRequest,
     TextMessage,
+    FlexMessage,
+    FlexContainer,
     QuickReply,
     QuickReplyItem,
     MessageAction,
@@ -35,6 +37,11 @@ from dependencies import (
     get_rich_menu_service,
     get_line_messaging_api,
     get_line_parser,
+)
+from services.flex_messages import (
+    create_new_user_welcome_flex,
+    create_help_flex_message,
+    create_emergency_flex_message,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -156,22 +163,15 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 
     # Handle new users - prompt for language selection
     if user_lang is None:
-        # Show multi-language welcome message with quick reply buttons
-        quick_reply = QuickReply(
-            items=[
-                QuickReplyItem(action=MessageAction(label="🇬🇧 English", text="/lang en")),
-                QuickReplyItem(action=MessageAction(label="🇹🇼 繁體中文", text="/lang zh")),
-                QuickReplyItem(action=MessageAction(label="🇮🇩 Bahasa Indonesia", text="/lang id")),
-                QuickReplyItem(action=MessageAction(label="🇻🇳 Tiếng Việt", text="/lang vi")),
-            ]
-        )
+        # Show beautiful flex message with language selection buttons
+        flex_content = create_new_user_welcome_flex()
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
                 messages=[
-                    TextMessage(
-                        text=NEW_USER_WELCOME_MESSAGE,
-                        quick_reply=quick_reply,
+                    FlexMessage(
+                        alt_text="Welcome to IMIGO! Please select your language.",
+                        contents=FlexContainer.from_dict(flex_content)
                     )
                 ],
             )
@@ -229,19 +229,33 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 
     # Handle other simple commands
     if text.strip().lower() == "/help":
+        # Show help menu with flex message
+        flex_content = create_help_flex_message(user_lang)
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=cfg.get_message("help", user_lang))],
+                messages=[
+                    FlexMessage(
+                        alt_text="IMIGO Help Menu - Select a category",
+                        contents=FlexContainer.from_dict(flex_content)
+                    )
+                ],
             )
         )
         return
 
     if text.strip().lower() == "/emergency":
+        # Show emergency contacts with flex message
+        flex_content = create_emergency_flex_message(user_lang)
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=cfg.get_emergency_info())],
+                messages=[
+                    FlexMessage(
+                        alt_text="Emergency Contacts - Taiwan",
+                        contents=FlexContainer.from_dict(flex_content)
+                    )
+                ],
             )
         )
         return
@@ -321,11 +335,17 @@ async def handle_postback(event: PostbackEvent) -> None:
         )
 
     elif data == "category_emergency":
-        emergency_info = cfg.get_emergency_info()
+        # Show emergency contacts with flex message
+        flex_content = create_emergency_flex_message(user_lang)
         await line_api.reply_message(
             ReplyMessageRequest(
                 reply_token=event.reply_token,
-                messages=[TextMessage(text=emergency_info)],
+                messages=[
+                    FlexMessage(
+                        alt_text="Emergency Contacts - Taiwan",
+                        contents=FlexContainer.from_dict(flex_content)
+                    )
+                ],
             )
         )
 
