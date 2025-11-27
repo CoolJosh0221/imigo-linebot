@@ -15,10 +15,12 @@ class DatabaseService:
     def __init__(
         self, db_url: str = "sqlite+aiosqlite:///database.db", echo: bool = False
     ):
+        self.db_url = db_url
         self.engine = create_async_engine(url=db_url, echo=echo)
         self.Session: async_sessionmaker[AsyncSession] = async_sessionmaker(
             self.engine, expire_on_commit=False
         )
+        log.info(f"Database initialized with URL: {db_url}")
 
     async def init_db(self) -> None:
         async with self.engine.begin() as conn:

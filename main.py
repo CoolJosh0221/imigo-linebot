@@ -148,6 +148,7 @@ async def health():
 
 
 async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> None:
+    """Handle text messages from users"""
     cfg = get_config()
     container = get_container()
     line_api = container.line_messaging_api
@@ -157,12 +158,16 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
     language_detection_service = container.language_detection_service
     rich_menu_service = container.rich_menu_service
 
-    # Mark message as read
-    await line_api.mark_messages_as_read_by_token(
-        mark_messages_as_read_by_token_request=MarkMessagesAsReadByTokenRequest(
-            markAsReadToken=event.message.mark_as_read_token
-        ),
-    )
+    # Mark message as read (with error handling)
+    try:
+        if hasattr(event.message, 'mark_as_read_token') and event.message.mark_as_read_token:
+            await line_api.mark_messages_as_read_by_token(
+                mark_messages_as_read_by_token_request=MarkMessagesAsReadByTokenRequest(
+                    markAsReadToken=event.message.mark_as_read_token
+                ),
+            )
+    except Exception as e:
+        log.warning(f"Failed to mark message as read: {e}")
 
     # Check if this is a new user (no language set yet)
     user_lang = await db_service.get_user_language(user_id)
@@ -274,7 +279,11 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
             return
 
     # Use AI service for all other messages
-    reply = await ai_service.generate_response(user_id, text)
+    try:
+        reply = await ai_service.generate_response(user_id, text)
+    except Exception as e:
+        log.error(f"AI service error: {e}", exc_info=True)
+        reply = cfg.get_message("help", user_lang)
 
     await line_api.reply_message(
         ReplyMessageRequest(
@@ -284,6 +293,7 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
 
 
 async def handle_postback(event: PostbackEvent) -> None:
+    """Handle postback events from rich menu buttons"""
     cfg = get_config()
     container = get_container()
     line_api = container.line_messaging_api
@@ -367,7 +377,12 @@ async def handle_postback(event: PostbackEvent) -> None:
         }
 
         prompt = prompts.get(data, cfg.get_message("help", user_lang))
-        reply = await ai_service.generate_response(user_id, prompt)
+
+        try:
+            reply = await ai_service.generate_response(user_id, prompt)
+        except Exception as e:
+            log.error(f"AI service error in postback: {e}", exc_info=True)
+            reply = cfg.get_message("help", user_lang)
 
         await line_api.reply_message(
             ReplyMessageRequest(
@@ -387,23 +402,42 @@ async def handle_message(event: MessageEvent) -> None:
 
 @app.post("/webhook")
 async def webhook(request: Request):
-    parser = get_container().line_parser
-
-    signature = request.headers.get("X-Line-Signature", "")
-    body = (await request.body()).decode()
-
+    """LINE webhook endpoint for receiving events"""
     try:
-        events = parser.parse(body, signature)
-    except InvalidSignatureError:
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        container = get_container()
+        parser = container.line_parser
 
-    for event in events:
-        if isinstance(event, MessageEvent):
-            await handle_message(event)
-        elif isinstance(event, PostbackEvent):
-            await handle_postback(event)
+        # Get signature and body
+        signature = request.headers.get("X-Line-Signature", "")
+        body = (await request.body()).decode()
 
-    return {"status": "ok"}
+        # Validate signature and parse events
+        try:
+            events = parser.parse(body, signature)
+        except InvalidSignatureError:
+            log.error("Invalid LINE signature")
+            raise HTTPException(status_code=400, detail="Invalid signature")
+
+        # Process each event
+        for event in events:
+            try:
+                if isinstance(event, MessageEvent):
+                    await handle_message(event)
+                elif isinstance(event, PostbackEvent):
+                    await handle_postback(event)
+                else:
+                    log.info(f"Unhandled event type: {type(event).__name__}")
+            except Exception as e:
+                # Log error but don't fail the webhook
+                log.error(f"Error processing event: {e}", exc_info=True)
+
+        return {"status": "ok"}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        log.error(f"Webhook error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 
 if __name__ == "__main__":

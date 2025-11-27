@@ -44,8 +44,8 @@ class ServiceContainer:
 
         logger.info("Initializing services...")
 
-        # Initialize database
-        self.db_service = DatabaseService()
+        # Initialize database with config URL
+        self.db_service = DatabaseService(db_url=config.db_url)
         await self.db_service.init_db()
         logger.info("Database service initialized")
 
@@ -92,12 +92,40 @@ class ServiceContainer:
 
     async def cleanup(self):
         """Clean up resources"""
+        logger.info("Cleaning up services...")
+
+        # Close AI service
+        if self.ai_service:
+            try:
+                await self.ai_service.aclose()
+            except Exception as e:
+                logger.error(f"Error closing AI service: {e}")
+
+        # Close translation service
+        if self.translation_service:
+            try:
+                await self.translation_service.aclose()
+            except Exception as e:
+                logger.error(f"Error closing translation service: {e}")
+
+        # Close database
+        if self.db_service:
+            try:
+                await self.db_service.dispose()
+                logger.info("Database service disposed")
+            except Exception as e:
+                logger.error(f"Error disposing database: {e}")
+
+        # Close LINE API client
         if self._line_async_client:
-            await self._line_async_client.close()
-            logger.info("LINE API client closed")
+            try:
+                await self._line_async_client.close()
+                logger.info("LINE API client closed")
+            except Exception as e:
+                logger.error(f"Error closing LINE API client: {e}")
 
         self._initialized = False
-        logger.info("Services cleaned up")
+        logger.info("All services cleaned up successfully")
 
     def is_initialized(self) -> bool:
         """Check if services are initialized"""

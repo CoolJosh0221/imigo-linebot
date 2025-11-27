@@ -116,3 +116,11 @@ Only output the translated text, nothing else. Keep the tone and style natural."
 
         return f"""{flag} {lang_name}:
 {translated_text}"""
+
+    async def aclose(self) -> None:
+        """Close underlying HTTP client for AsyncOpenAI"""
+        try:
+            await self.client.close()
+            logger.info("Translation service client closed")
+        except Exception as e:
+            logger.error(f"Error closing translation service client: {e}")

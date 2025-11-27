@@ -1,11 +1,19 @@
 """Translation API endpoints"""
 import logging
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+
+from services.translation_service import TranslationService
+from services.container import get_container
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/translate", tags=["Translation"])
+
+
+def get_translation_svc() -> TranslationService:
+    """Get translation service from service container"""
+    return get_container().translation_service
 
 
 class TranslationRequest(BaseModel):
@@ -22,7 +30,10 @@ class TranslationResponse(BaseModel):
 
 
 @router.post("/", response_model=TranslationResponse)
-async def translate_text(request: TranslationRequest):
+async def translate_text(
+    request: TranslationRequest,
+    translation_service: TranslationService = Depends(get_translation_svc)
+):
     """
     Translate text from one language to another
 
@@ -40,8 +51,6 @@ async def translate_text(request: TranslationRequest):
         - th: Thai (ภาษาไทย)
         - fil: Tagalog (Filipino)
     """
-    from main import translation_service
-
     try:
         translated = await translation_service.translate_message(
             request.text, request.target_language, request.source_language
@@ -54,7 +63,7 @@ async def translate_text(request: TranslationRequest):
             target_language=request.target_language,
         )
     except Exception as e:
-        logger.error(f"Translation error: {e}")
+        logger.error(f"Translation error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 
