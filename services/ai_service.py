@@ -103,18 +103,30 @@ IMPORTANT:
 
     async def generate_response(self, user_id: str, message: str) -> str:
         try:
+            # Truncate current message to prevent massive inputs
+            safe_message = message[:2000] + "..." if len(message) > 2000 else message
+
             user_language = await self.db_service.get_user_language(user_id) or self.config.language
-            history = await self.db_service.get_conversation_history(user_id=user_id, limit=10)
+            
+            # Fetch limited history
+            history = await self.db_service.get_conversation_history(user_id=user_id, limit=4)
 
             messages = [{"role": "system", "content": self._get_system_prompt(user_language)}]
-            messages.extend({"role": msg["role"], "content": msg["content"]} for msg in history)
-            messages.append({"role": "user", "content": message})
+            
+            # Add history with truncation to ensure safety
+            for msg in history:
+                content = msg["content"]
+                if len(content) > 500:
+                    content = content[:500] + "..."
+                messages.append({"role": msg["role"], "content": content})
+            
+            messages.append({"role": "user", "content": safe_message})
 
             response = await self.client.chat.completions.create(
                 model=self.model_name,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=1000,
+                max_tokens=500,
             )
 
             ai_response = response.choices[0].message.content.strip()

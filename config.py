@@ -135,10 +135,10 @@ SUPPORTED_LANGUAGES = {
 
 # Language-specific chat bar text for rich menus (max 14 characters)
 CHAT_BAR_TEXT = {
-    "id": "Bantuan",  # Help in Indonesian
-    "zh": "幫助",  # Help in Chinese
-    "en": "Help",  # Help in English
-    "vi": "Trợ giúp",  # Help in Vietnamese
+    "id": "Menu & Bantuan",  # Menu & Help in Indonesian
+    "zh": "求助與常用功能",  # Help & Common Functions in Chinese
+    "en": "Help & Actions",  # Help & Actions in English
+    "vi": "Menu & Hỗ trợ",  # Menu & Help in Vietnamese
 }
 
 # Emergency contacts for Taiwan
