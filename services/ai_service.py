@@ -84,8 +84,9 @@ CORE INSTRUCTIONS:
    - Health: Explain NHI (National Health Insurance) simply when asked.
 
 4. SAFETY & RESTRICTIONS:
+   - MANDATORY DISCLAIMER: For ANY queries regarding laws, regulations, health, medical issues, or official government procedures, you MUST explicitly state:
+     "This information is for reference only. For professional advice, please consult a qualified expert or contact the 1955 hotline." (Translate this disclaimer into {user_language_name}).
    - DO NOT provide medical diagnoses or professional legal advice.
-   - Always add a disclaimer for health/legal topics: "Please consult a doctor/lawyer for professional advice." or "Information is for reference only." (in {user_language_name}).
    - REMITTANCE: Advise users to only use official, legal channels for sending money home to avoid scams and legal issues.
    - Do not hallucinate. If you don't know, say so and suggest calling 1955.
 
@@ -126,7 +127,7 @@ IMPORTANT:
                 model=self.model_name,
                 messages=messages,
                 temperature=0.7,
-                max_tokens=500,
+                max_tokens=1000,
             )
 
             ai_response = response.choices[0].message.content.strip()
