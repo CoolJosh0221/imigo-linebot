@@ -369,7 +369,8 @@ def create_help_flex_message(language: str = "en") -> Dict[str, Any]:
                     "action": {
                         "type": "postback",
                         "label": lang_categories["labor"],
-                        "data": "category_labor"
+                        "data": "category_labor",
+                        "displayText": lang_categories["labor"]
                     },
                     "style": "primary",
                     "color": "#1E90FF",
@@ -381,7 +382,8 @@ def create_help_flex_message(language: str = "en") -> Dict[str, Any]:
                     "action": {
                         "type": "postback",
                         "label": lang_categories["government"],
-                        "data": "category_government"
+                        "data": "category_government",
+                        "displayText": lang_categories["government"]
                     },
                     "style": "primary",
                     "color": "#FF6347",
@@ -393,7 +395,8 @@ def create_help_flex_message(language: str = "en") -> Dict[str, Any]:
                     "action": {
                         "type": "postback",
                         "label": lang_categories["healthcare"],
-                        "data": "category_healthcare"
+                        "data": "category_healthcare",
+                        "displayText": lang_categories["healthcare"]
                     },
                     "style": "primary",
                     "color": "#32CD32",
@@ -405,7 +408,8 @@ def create_help_flex_message(language: str = "en") -> Dict[str, Any]:
                     "action": {
                         "type": "postback",
                         "label": lang_categories["translate"],
-                        "data": "category_translate"
+                        "data": "category_translate",
+                        "displayText": lang_categories["translate"]
                     },
                     "style": "primary",
                     "color": "#FFD700",
@@ -417,7 +421,8 @@ def create_help_flex_message(language: str = "en") -> Dict[str, Any]:
                     "action": {
                         "type": "postback",
                         "label": lang_categories["daily"],
-                        "data": "category_daily"
+                        "data": "category_daily",
+                        "displayText": lang_categories["daily"]
                     },
                     "style": "primary",
                     "color": "#9370DB",
@@ -463,7 +468,9 @@ def create_emergency_flex_message(language: str = "en") -> Dict[str, Any]:
             "police": "Police",
             "fire": "Fire/Ambulance",
             "worker": "Worker Hotline",
-            "indonesia": "Indonesia Office",
+            "indonesia": "Indonesia Office (KDEI)",
+            "vietnam": "Vietnam Office (VECO)",
+            "philippines": "Philippines Office (MECO)",
             "labor": "Labor Bureau",
             "trafficking": "Anti-Trafficking"
         },
@@ -471,7 +478,9 @@ def create_emergency_flex_message(language: str = "en") -> Dict[str, Any]:
             "police": "警察",
             "fire": "消防/救護車",
             "worker": "外勞專線",
-            "indonesia": "印尼代表處",
+            "indonesia": "印尼代表處 (KDEI)",
+            "vietnam": "越南代表處 (VECO)",
+            "philippines": "菲律賓代表處 (MECO)",
             "labor": "勞工局",
             "trafficking": "反人口販運"
         },
@@ -479,7 +488,9 @@ def create_emergency_flex_message(language: str = "en") -> Dict[str, Any]:
             "police": "Polisi",
             "fire": "Pemadam/Ambulans",
             "worker": "Hotline Pekerja",
-            "indonesia": "Kantor Indonesia",
+            "indonesia": "Kantor Indonesia (KDEI)",
+            "vietnam": "Kantor Vietnam (VECO)",
+            "philippines": "Kantor Filipina (MECO)",
             "labor": "Dinas Tenaga Kerja",
             "trafficking": "Anti Perdagangan"
         },
@@ -487,7 +498,9 @@ def create_emergency_flex_message(language: str = "en") -> Dict[str, Any]:
             "police": "Cảnh Sát",
             "fire": "Cứu Hỏa/Cấp Cứu",
             "worker": "Đường Dây Nóng",
-            "indonesia": "Văn Phòng Indonesia",
+            "indonesia": "Văn Phòng Indonesia (KDEI)",
+            "vietnam": "Văn Phòng Việt Nam (VECO)",
+            "philippines": "Văn Phòng Philippines (MECO)",
             "labor": "Cục Lao Động",
             "trafficking": "Chống Buôn Người"
         }
@@ -549,7 +562,12 @@ def create_emergency_flex_message(language: str = "en") -> Dict[str, Any]:
                 },
                 create_contact_box(labels["worker"], "1955"),
                 create_contact_box(labels["indonesia"], "+886-2-2356-5156"),
-                create_contact_box(labels["labor"], "1955"),
+                create_contact_box(labels["vietnam"], "+886-2-2516-6626"),
+                create_contact_box(labels["philippines"], "+886-2-2508-1719"),
+                {
+                    "type": "separator",
+                    "margin": "lg"
+                },
                 create_contact_box(labels["trafficking"], "113"),
             ]
         },
@@ -569,4 +587,124 @@ def create_emergency_flex_message(language: str = "en") -> Dict[str, Any]:
                 }
             ]
         }
+    }
+
+
+def create_category_carousel(language: str = "en") -> Dict[str, Any]:
+    """
+    Create a carousel menu for service categories
+    """
+    categories = {
+        "en": {
+            "labor": {"title": "💼 Work Issues", "desc": "Labor rights, disputes, and regulations"},
+            "government": {"title": "🏛️ Govt Services", "desc": "Permits, taxes, and legal docs"},
+            "healthcare": {"title": "🏥 Healthcare", "desc": "Hospitals, insurance, and medical info"},
+            "translate": {"title": "🌐 Translation", "desc": "Translate text or voice instantly"},
+            "daily": {"title": "🏠 Daily Life", "desc": "Transport, housing, and living tips"},
+            "emergency": {"title": "🚨 Emergency", "desc": "Police, ambulance, and hotlines"},
+        },
+        "zh": {
+            "labor": {"title": "💼 工作問題", "desc": "勞工權益、糾紛與法規"},
+            "government": {"title": "🏛️ 政府服務", "desc": "居留證、稅務與法律文件"},
+            "healthcare": {"title": "🏥 醫療保健", "desc": "醫院、健保與醫療資訊"},
+            "translate": {"title": "🌐 翻譯服務", "desc": "即時文字或語音翻譯"},
+            "daily": {"title": "🏠 日常生活", "desc": "交通、住宿與生活小撇步"},
+            "emergency": {"title": "🚨 緊急聯絡", "desc": "警察、救護車與求助專線"},
+        },
+        "id": {
+            "labor": {"title": "💼 Masalah Kerja", "desc": "Hak pekerja, perselisihan, dan aturan"},
+            "government": {"title": "🏛️ Layanan Govt", "desc": "Izin, pajak, dan dokumen hukum"},
+            "healthcare": {"title": "🏥 Kesehatan", "desc": "RS, asuransi, dan info medis"},
+            "translate": {"title": "🌐 Terjemahan", "desc": "Terjemahkan teks/suara instan"},
+            "daily": {"title": "🏠 Sehari-hari", "desc": "Transportasi, hunian, dan tips"},
+            "emergency": {"title": "🚨 Darurat", "desc": "Polisi, ambulans, dan hotline"},
+        },
+        "vi": {
+            "labor": {"title": "💼 Công Việc", "desc": "Quyền lợi, tranh chấp, quy định"},
+            "government": {"title": "🏛️ Chính Phủ", "desc": "Giấy tờ, thuế, pháp lý"},
+            "healthcare": {"title": "🏥 Y Tế", "desc": "Bệnh viện, bảo hiểm, y khoa"},
+            "translate": {"title": "🌐 Dịch Thuật", "desc": "Dịch văn bản hoặc giọng nói"},
+            "daily": {"title": "🏠 Đời Sống", "desc": "Đi lại, nhà ở, mẹo vặt"},
+            "emergency": {"title": "🚨 Khẩn Cấp", "desc": "Cảnh sát, cấp cứu, đường dây nóng"},
+        }
+    }
+
+    texts = categories.get(language, categories["en"])
+
+    bubbles = []
+    
+    # Order of keys to display
+    keys = ["labor", "government", "healthcare", "translate", "daily", "emergency"]
+
+    for key in keys:
+        data = texts[key]
+        # Define color based on original mapping (simplified here or reuse)
+        colors = {
+            "labor": "#1E90FF",
+            "government": "#FF6347",
+            "healthcare": "#32CD32",
+            "translate": "#FFD700",
+            "daily": "#9370DB",
+            "emergency": "#DC143C"
+        }
+        color = colors.get(key, "#1E90FF")
+
+        bubbles.append({
+            "type": "bubble",
+            "size": "micro",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": data["title"],
+                        "weight": "bold",
+                        "color": "#FFFFFF",
+                        "size": "sm",
+                        "wrap": True
+                    }
+                ],
+                "backgroundColor": color,
+                "paddingAll": "12px"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": data["desc"],
+                        "size": "xs",
+                        "color": "#666666",
+                        "wrap": True,
+                        "maxLines": 3
+                    }
+                ],
+                "paddingAll": "12px"
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "button",
+                        "action": {
+                            "type": "postback" if key != "emergency" else "message",
+                            "label": "Select",
+                            "data": f"category_{key}" if key != "emergency" else None,
+                            "text": "/emergency" if key == "emergency" else None,
+                            "displayText": data["title"] if key != "emergency" else None
+                        },
+                        "style": "secondary",
+                        "height": "sm"
+                    }
+                ],
+                "paddingAll": "12px"
+            }
+        })
+
+    return {
+        "type": "carousel",
+        "contents": bubbles
     }
