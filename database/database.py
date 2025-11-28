@@ -93,6 +93,19 @@ class DatabaseService:
             )
         return lang
 
+    async def get_all_user_preferences(self) -> list[dict]:
+        async with self.Session() as s:
+            users = list(await s.scalars(select(UserPreferences)))
+            return [
+                {
+                    "user_id": u.user_id,
+                    "language": u.language,
+                    "created_at": u.created_at,
+                    "updated_at": u.updated_at,
+                }
+                for u in users
+            ]
+
     # Group translation methods
     async def enable_group_translation(
         self, group_id: str, target_language: str, enabled_by: str

@@ -365,94 +365,76 @@ def create_help_flex_message(language: str = "en") -> Dict[str, Any]:
             "layout": "vertical",
             "contents": [
                 {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "md",
-                    "margin": "lg",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "postback",
-                                "label": lang_categories["labor"].split(" ", 1)[1],
-                                "data": "category_labor"
-                            },
-                            "style": "primary",
-                            "color": "#1E90FF",
-                            "flex": 1
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "postback",
-                                "label": lang_categories["government"].split(" ", 1)[1],
-                                "data": "category_government"
-                            },
-                            "style": "primary",
-                            "color": "#FF6347",
-                            "flex": 1
-                        }
-                    ]
+                    "type": "button",
+                    "action": {
+                        "type": "postback",
+                        "label": lang_categories["labor"],
+                        "data": "category_labor"
+                    },
+                    "style": "primary",
+                    "color": "#1E90FF",
+                    "margin": "md",
+                    "height": "sm"
                 },
                 {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "md",
-                    "margin": "md",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "postback",
-                                "label": lang_categories["healthcare"].split(" ", 1)[1],
-                                "data": "category_healthcare"
-                            },
-                            "style": "primary",
-                            "color": "#32CD32",
-                            "flex": 1
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "postback",
-                                "label": lang_categories["translate"].split(" ", 1)[1],
-                                "data": "category_translate"
-                            },
-                            "style": "primary",
-                            "color": "#FFD700",
-                            "flex": 1
-                        }
-                    ]
+                    "type": "button",
+                    "action": {
+                        "type": "postback",
+                        "label": lang_categories["government"],
+                        "data": "category_government"
+                    },
+                    "style": "primary",
+                    "color": "#FF6347",
+                    "margin": "sm",
+                    "height": "sm"
                 },
                 {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "spacing": "md",
-                    "margin": "md",
-                    "contents": [
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "postback",
-                                "label": lang_categories["daily"].split(" ", 1)[1],
-                                "data": "category_daily"
-                            },
-                            "style": "primary",
-                            "color": "#9370DB",
-                            "flex": 1
-                        },
-                        {
-                            "type": "button",
-                            "action": {
-                                "type": "message",
-                                "label": lang_categories["emergency"].split(" ", 1)[1],
-                                "text": "/emergency"
-                            },
-                            "style": "primary",
-                            "color": "#DC143C",
-                            "flex": 1
-                        }
-                    ]
+                    "type": "button",
+                    "action": {
+                        "type": "postback",
+                        "label": lang_categories["healthcare"],
+                        "data": "category_healthcare"
+                    },
+                    "style": "primary",
+                    "color": "#32CD32",
+                    "margin": "sm",
+                    "height": "sm"
+                },
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "postback",
+                        "label": lang_categories["translate"],
+                        "data": "category_translate"
+                    },
+                    "style": "primary",
+                    "color": "#FFD700",
+                    "margin": "sm",
+                    "height": "sm"
+                },
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "postback",
+                        "label": lang_categories["daily"],
+                        "data": "category_daily"
+                    },
+                    "style": "primary",
+                    "color": "#9370DB",
+                    "margin": "sm",
+                    "height": "sm"
+                },
+                {
+                    "type": "button",
+                    "action": {
+                        "type": "message",
+                        "label": lang_categories["emergency"],
+                        "text": "/emergency"
+                    },
+                    "style": "primary",
+                    "color": "#DC143C",
+                    "margin": "sm",
+                    "height": "sm"
                 }
             ]
         }

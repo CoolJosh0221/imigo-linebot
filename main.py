@@ -204,7 +204,17 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
         return
 
     if cmd == "/help":
-        await send_flex_message(line_api, event.reply_token, create_help_flex_message(user_lang), "IMIGO Help Menu")
+        help_text = cfg.get_message("help", user_lang)
+        flex_msg = create_help_flex_message(user_lang)
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    TextMessage(text=help_text),
+                    FlexMessage(alt_text="IMIGO Help Menu", contents=FlexContainer.from_dict(flex_msg))
+                ]
+            )
+        )
         return
 
     if cmd == "/emergency":
@@ -234,6 +244,7 @@ async def handle_text_message(event: MessageEvent, user_id: str, text: str) -> N
         reply = cfg.get_message("help", user_lang)
 
     await send_text_message(line_api, event.reply_token, reply)
+    log.info(f"Replied to user {user_id[:8]} in {user_lang}")
 
 
 async def handle_postback(event: PostbackEvent) -> None:
@@ -259,6 +270,19 @@ async def handle_postback(event: PostbackEvent) -> None:
     elif data == "category_language":
         await send_text_message(line_api, event.reply_token, cfg.get_message("language_select", user_lang), create_language_quick_reply())
 
+    elif data == "category_help":
+        help_text = cfg.get_message("help", user_lang)
+        flex_msg = create_help_flex_message(user_lang)
+        await line_api.reply_message(
+            ReplyMessageRequest(
+                reply_token=event.reply_token,
+                messages=[
+                    TextMessage(text=help_text),
+                    FlexMessage(alt_text="IMIGO Help Menu", contents=FlexContainer.from_dict(flex_msg))
+                ]
+            )
+        )
+
     elif data.startswith("lang_"):
         lang_code = data.split("_")[1]
         if cfg.is_valid_language(lang_code):
@@ -267,15 +291,22 @@ async def handle_postback(event: PostbackEvent) -> None:
 
     else:
         prompts = {
-            "category_labor": "I have a problem at work",
-            "category_government": "I need information about government services",
-            "category_daily": "I need help with daily life",
-            "category_translate": "I need translation help",
-            "category_healthcare": "I need healthcare information",
+            "category_labor": "I have some questions I want to ask about work.",
+            "category_daily": "I have some questions I want to ask about daily life.",
+            "category_translate": "I need help translating something.",
+            "category_healthcare": "I have some questions I want to ask about healthcare.",
+            "category_government": "I have some questions I want to ask about government services.",
         }
 
+        # Get full language name for clearer instruction to LLM
+        from config import SUPPORTED_LANGUAGES
+        user_lang_name = SUPPORTED_LANGUAGES.get(user_lang, "English")
+        
+        base_prompt = prompts.get(data, cfg.get_message("help", user_lang))
+        full_prompt = f"{base_prompt} (IMPORTANT: Please respond in {user_lang_name}.)"
+
         try:
-            reply = await ai_service.generate_response(user_id, prompts.get(data, cfg.get_message("help", user_lang)))
+            reply = await ai_service.generate_response(user_id, full_prompt)
         except Exception as e:
             log.error(f"AI service error in postback: {e}", exc_info=True)
             reply = cfg.get_message("help", user_lang)

@@ -49,10 +49,17 @@ class TestRichMenuService:
         with pytest.raises(ValueError, match="must be within"):
             rich_menu_service._validate_image_path("/etc/passwd")
 
-    def test_validate_image_path_invalid_extension(self, rich_menu_service, tmp_path):
+    def test_validate_image_path_invalid_extension(self, rich_menu_service, tmp_path, monkeypatch):
         """Test validation fails for invalid file extension"""
-        # Create a temporary file with invalid extension
-        test_file = tmp_path / "test.txt"
+        # Create a temporary directory structure mimicking rich_menu_dir
+        mock_rich_menu_dir = tmp_path / "rich_menu"
+        mock_rich_menu_dir.mkdir()
+
+        # Mock rich_menu_service.rich_menu_dir to point to our mock directory
+        monkeypatch.setattr(rich_menu_service, 'rich_menu_dir', mock_rich_menu_dir)
+
+        # Create a temporary file with invalid extension INSIDE the mock rich_menu_dir
+        test_file = mock_rich_menu_dir / "test.txt"
         test_file.write_text("test")
 
         with pytest.raises(ValueError, match="Invalid image format"):
@@ -159,9 +166,13 @@ class TestRichMenuService:
         mock_line_api.delete_rich_menu.assert_called_once_with(rich_menu_id)
 
     @pytest.mark.asyncio
-    async def test_upload_rich_menu_image_success(self, rich_menu_service, mock_blob_api, tmp_path):
+    async def test_upload_rich_menu_image_success(self, rich_menu_service, mock_blob_api, tmp_path, monkeypatch):
         """Test successful image upload for rich menu"""
         rich_menu_id = "test_rich_menu_id"
+        
+        # Mock rich_menu_service.rich_menu_dir to point to tmp_path
+        monkeypatch.setattr(rich_menu_service, 'rich_menu_dir', tmp_path)
+        
         image_path = tmp_path / "test_image.png"
         image_path.write_bytes(b"test_image_content")
 
@@ -174,12 +185,16 @@ class TestRichMenuService:
         args, kwargs = mock_blob_api.set_rich_menu_image.call_args
         assert kwargs["rich_menu_id"] == rich_menu_id
         assert kwargs["body"] == b"test_image_content"
-        assert kwargs["content_type"] == "image/png"
+        assert kwargs["_headers"]["Content-Type"] == "image/png"
 
     @pytest.mark.asyncio
-    async def test_upload_rich_menu_image_failure(self, rich_menu_service, mock_blob_api, tmp_path):
+    async def test_upload_rich_menu_image_failure(self, rich_menu_service, mock_blob_api, tmp_path, monkeypatch):
         """Test image upload failure for rich menu"""
         rich_menu_id = "test_rich_menu_id"
+        
+        # Mock rich_menu_service.rich_menu_dir to point to tmp_path
+        monkeypatch.setattr(rich_menu_service, 'rich_menu_dir', tmp_path)
+        
         image_path = tmp_path / "test_image.png"
         image_path.write_bytes(b"test_image_content")
 
@@ -211,7 +226,7 @@ class TestRichMenuService:
         assert result_id == mock_rich_menu_id
         mock_line_api.create_rich_menu.assert_called_once()
         args, kwargs = mock_line_api.create_rich_menu.call_args
-        assert kwargs['rich_menu_request'].name == menu_name
+        assert args[0].name == menu_name
         
     @pytest.mark.asyncio
     async def test_create_language_rich_menus_success(self, rich_menu_service, mock_line_api, mock_blob_api, project_root, tmp_path):

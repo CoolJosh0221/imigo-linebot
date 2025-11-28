@@ -5,76 +5,45 @@ import os
 TRANSLATIONS = {
     "en": {
         "buttons": {
+            "language": "Switch Language",
+            "help": "Help & Guide",
+            "translate": "Translate Text",
             "health": "Health & Medical",
             "work": "Work & Employment",
-            "language": "Switch Language",
             "emergency": "Emergency Help",
-            "govt": "Government Services",
-            "translate": "Translate Text",
         }
     },
     "zh": {
         "buttons": {
+            "language": "切換語言",
+            "help": "使用說明",
+            "translate": "文字翻譯",
             "health": "健康與醫療",
             "work": "工作與就業",
-            "language": "切換語言",
             "emergency": "緊急協助",
-            "govt": "政府服務",
-            "translate": "文字翻譯",
         }
     },
     "id": {
         "buttons": {
+            "language": "Ganti Bahasa",
+            "help": "Bantuan & Panduan",
+            "translate": "Terjemahkan Teks",
             "health": "Kesehatan & Medis",
             "work": "Pekerjaan & Kerja",
-            "language": "Ganti Bahasa",
             "emergency": "Bantuan Darurat",
-            "govt": "Layanan Pemerintah",
-            "translate": "Terjemahkan Teks",
         }
     },
     "vi": {
         "buttons": {
+            "language": "Đổi Ngôn Ngữ",
+            "help": "Trợ Giúp & Hướng Dẫn",
+            "translate": "Dịch Văn Bản",
             "health": "Sức Khỏe & Y Tế",
             "work": "Việc Làm & Lao Động",
-            "language": "Đổi Ngôn Ngữ",
             "emergency": "Trợ Giúp Khẩn Cấp",
-            "govt": "Dịch Vụ Chính Phủ",
-            "translate": "Dịch Văn Bản",
         }
     },
 }
-
-
-def download_openmoji_icons():
-    """Download colored OpenMoji icons"""
-    os.makedirs("icons", exist_ok=True)
-
-    # OpenMoji CDN - using 618x618 color PNGs
-    base_url = (
-        "https://raw.githubusercontent.com/hfg-gmuend/openmoji/master/color/618x618/"
-    )
-
-    # OpenMoji hex codes for relevant emojis
-    icons = {
-        "health": "E090.png",
-        "work": "1F4BC.png",
-        "language": "1F4AC.png",
-        "emergency": "1F6A8.png",
-        "govt": "1F3DB.png",
-        "translate": "1F310.png",
-    }
-
-    for key, filename in icons.items():
-        filepath = f"icons/{key}.png"
-        if not os.path.exists(filepath):
-            url = f"{base_url}{filename}"
-            print(f"Downloading {key} icon from OpenMoji...")
-            try:
-                urllib.request.urlretrieve(url, filepath)
-                print(f"  ✓ Downloaded {key}")
-            except Exception as e:
-                print(f"  ✗ Could not download {key}: {e}")
 
 
 def get_font(size, bold=False, language="en"):
@@ -84,10 +53,10 @@ def get_font(size, bold=False, language="en"):
     else:
         font_name = "NotoSans-Bold.ttf" if bold else "NotoSans-Regular.ttf"
 
-    font_path = f"fonts/{font_name}"
+    font_path = f"rich_menu/fonts/{font_name}"
     try:
         return ImageFont.truetype(font_path, size)
-    except:
+    except Exception:
         return ImageFont.load_default()
 
 
@@ -116,9 +85,10 @@ def generate_menu(language="en"):
 
     # Load font
     button_font = get_font(68, bold=True, language=language)
+    print(language, button_font.getname())
 
     # Button definitions
-    button_keys = ["health", "work", "language", "emergency", "govt", "translate"]
+    button_keys = ["language", "help", "translate", "health", "work", "emergency"]
 
     # Draw buttons
     for idx, key in enumerate(button_keys):
@@ -143,7 +113,7 @@ def generate_menu(language="en"):
         )
 
         # Load and paste colored icon
-        icon_path = f"icons/{key}.png"
+        icon_path = f"rich_menu/icons/{key}.png"
         if os.path.exists(icon_path):
             try:
                 icon = Image.open(icon_path).convert("RGBA")
@@ -173,10 +143,6 @@ def generate_menu(language="en"):
     return img
 
 
-# Download OpenMoji icons
-print("Downloading OpenMoji colored icons...\n")
-download_openmoji_icons()
-
 # Generate menus
 print("\nGenerating modern multilingual menus...\n")
 for lang_code, lang_name in [
@@ -187,7 +153,7 @@ for lang_code, lang_name in [
 ]:
     print(f"Generating {lang_name} ({lang_code})...")
     menu_img = generate_menu(lang_code)
-    menu_img.save(f"menu_{lang_code}.png")
+    menu_img.save(f"rich_menu/menu_{lang_code}.png")
     print(f"  ✓ Saved menu_{lang_code}.png\n")
 
 print("✨ Done!")

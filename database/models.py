@@ -1,6 +1,7 @@
 from sqlalchemy import Column, String, DateTime, Text, Boolean
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
+from datetime import datetime
 import uuid
 
 Base = declarative_base()
@@ -13,7 +14,7 @@ class Conversation(Base):
     user_id = Column(String, nullable=False, index=True)
     role = Column(String, nullable=False)
     content = Column(Text, nullable=False)
-    created_at = Column(DateTime, default=func.now())
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 
 class UserPreferences(Base):

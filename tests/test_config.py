@@ -17,8 +17,9 @@ class TestBotConfig:
         assert config.line_secret == "test-secret"
         assert config.line_token == "test-token"
 
-    def test_config_missing_line_credentials(self):
+    def test_config_missing_line_credentials(self, monkeypatch):
         """Test that missing LINE credentials raises error"""
+        monkeypatch.setattr("config.load_dotenv", lambda: None) # Mock load_dotenv
         os.environ.pop("LINE_CHANNEL_SECRET", None)
         os.environ.pop("LINE_CHANNEL_ACCESS_TOKEN", None)
 

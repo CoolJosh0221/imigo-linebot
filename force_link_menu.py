@@ -82,9 +82,7 @@ async def relink_all_users() -> bool:
         logger.info("  - Change their language preference")
         logger.info("  - Follow the bot (new users)")
 
-        # If you have a method to get all users, uncomment and implement:
-        """
-        users = await db_service.get_all_users()
+        users = await db_service.get_all_user_preferences()
         logger.info(f"Found {len(users)} users to relink")
 
         success_count = 0
@@ -109,7 +107,6 @@ async def relink_all_users() -> bool:
                 logger.error(f"✗ Failed to link menu to user {user_id[:8]}...")
 
         logger.info(f"\n✓ Relinked {success_count}/{len(users)} users successfully")
-        """
 
         return True
 

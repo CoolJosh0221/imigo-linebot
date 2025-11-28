@@ -67,3 +67,19 @@ async def get_stats(db_service = Depends(get_database_service)):
             "error": str(e),
             "timestamp": datetime.utcnow().isoformat(),
         }
+
+
+@router.get("/users")
+async def get_users(db_service = Depends(get_database_service)):
+    """
+    Get all registered users (UserPreferences)
+
+    Returns:
+        List of users and their preferences
+    """
+    try:
+        users = await db_service.get_all_user_preferences()
+        return {"users": users, "count": len(users)}
+    except Exception as e:
+        logger.error(f"Get users error: {e}")
+        return {"error": str(e)}

@@ -16,7 +16,7 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_healthcare"
+        "data": "category_language"
       }
     },
     {
@@ -28,7 +28,7 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_labor"
+        "data": "category_help"
       }
     },
     {
@@ -40,7 +40,7 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_language"
+        "data": "category_translate"
       }
     },
     {
@@ -52,7 +52,7 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_emergency"
+        "data": "category_healthcare"
       }
     },
     {
@@ -64,7 +64,7 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_government"
+        "data": "category_labor"
       }
     },
     {
@@ -76,7 +76,7 @@
       },
       "action": {
         "type": "postback",
-        "data": "category_translate"
+        "data": "category_emergency"
       }
     }
   ]
