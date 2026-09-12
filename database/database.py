@@ -53,6 +53,16 @@ class DatabaseService:
             for r in rows
         ]
 
+    async def save_exchange(self, user_id: str, message: str, response: str) -> None:
+        """Persist both sides together so failures cannot leave an orphaned turn."""
+        async with self.Session() as s, s.begin():
+            s.add_all(
+                [
+                    Conversation(user_id=user_id, role="user", content=message),
+                    Conversation(user_id=user_id, role="assistant", content=response),
+                ]
+            )
+
     async def clear_user_conversation(self, user_id: str) -> int:
         async with self.Session() as s, s.begin():
             res = await s.execute(

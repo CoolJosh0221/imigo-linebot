@@ -1,7 +1,7 @@
 """Tests for database service"""
+
 import pytest
 from database.database import DatabaseService
-from datetime import datetime, timedelta
 
 
 @pytest.fixture
@@ -15,6 +15,16 @@ async def db_service():
 
 class TestDatabaseService:
     """Test DatabaseService class"""
+
+    async def test_save_exchange_and_clear_isolated_history(self, db_service):
+        await db_service.save_exchange("alice", "My shift starts at 8.", "Understood.")
+        await db_service.save_exchange("bob", "Hello", "Hi")
+        history = await db_service.get_conversation_history("alice")
+        assert [m["role"] for m in history] == ["user", "assistant"]
+        assert history[0]["content"] == "My shift starts at 8."
+        assert await db_service.clear_user_conversation("alice") == 2
+        assert await db_service.get_conversation_history("alice") == []
+        assert len(await db_service.get_conversation_history("bob")) == 2
 
     @pytest.mark.asyncio
     async def test_save_and_get_conversation(self, db_service):
@@ -127,6 +137,7 @@ class TestDatabaseService:
         # Try to clean up messages older than 30 days
         # (this won't delete our message since it's recent)
         count = await db_service.cleanup_old_conversations(days_old=30)
+        assert count == 0
 
         # Our recent message should still be there
         history = await db_service.get_conversation_history(user_id)

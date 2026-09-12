@@ -222,3 +222,7 @@ models/
 letsencrypt/
 *.db
 database.db
+evals/results/
+.runtime/
+.secrets/
+.planning/

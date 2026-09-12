@@ -1,0 +1,56 @@
+# Combine with docker-compose.yaml (or podman-compose.yaml).
+# The tunnel credentials stay on the host; no Cloudflare account certificate is mounted.
+services:
+  ngrok:
+    # Cloudflare is the public entry point when this override is selected.
+    profiles: [ngrok]
+    image: docker.io/ngrok/ngrok:latest
+    command: [http, "http://backend:8000"]
+    environment:
+      NGROK_AUTHTOKEN: "${NGROK_AUTHTOKEN:-}"
+    depends_on: [backend]
+    networks: [bot-network]
+
+  cloudflared:
+    image: cloudflare/cloudflared:2026.9.1
+    user: "${CLOUDFLARED_UID:-1000}:${CLOUDFLARED_GID:-1000}"
+    command:
+      - tunnel
+      - --no-autoupdate
+      - --config
+      - /etc/cloudflared/config.yml
+      - run
+      - "${CLOUDFLARE_TUNNEL_ID:?Set CLOUDFLARE_TUNNEL_ID for the named tunnel}"
+    volumes:
+      - type: bind
+        source: ./deploy/cloudflared/config.yml
+        target: /etc/cloudflared/config.yml
+        read_only: true
+      - type: bind
+        source: "${CLOUDFLARE_TUNNEL_CREDENTIALS:-./.secrets/cloudflared.json}"
+        target: /run/secrets/cloudflared.json
+        read_only: true
+        bind:
+          create_host_path: false
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - bot-network
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  backend:
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s

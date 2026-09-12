@@ -1,6 +1,8 @@
 """Configuration management for IMIGO LINE Bot"""
+
 import os
-from typing import Dict, Optional, List
+import json
+from typing import Optional, List
 from dotenv import load_dotenv
 from exceptions import ConfigurationError
 
@@ -196,6 +198,21 @@ class BotConfig:
         self.model_name = self._get_env_with_default(
             "MODEL_NAME", "aisingapore/Qwen-SEA-LION-v4-32B-IT-4BIT"
         )
+        self.chat_history_messages = self._get_int("CHAT_HISTORY_MESSAGES", 12, 2, 100)
+        self.chat_input_max_bytes = self._get_int(
+            "CHAT_INPUT_MAX_BYTES", 6000, 3000, 64000
+        )
+        self.llm_timeout = self._get_int("LLM_TIMEOUT_SECONDS", 20, 1, 120)
+        try:
+            self.chat_template_kwargs = json.loads(
+                os.getenv("LLM_CHAT_TEMPLATE_KWARGS", "{}")
+            )
+            if not isinstance(self.chat_template_kwargs, dict):
+                raise ValueError("expected a JSON object")
+        except (ValueError, TypeError) as e:
+            raise ConfigurationError(
+                "LLM_CHAT_TEMPLATE_KWARGS must be a JSON object"
+            ) from e
 
         # Database
         self.db_url = self._get_env_with_default(
@@ -211,6 +228,15 @@ class BotConfig:
     def _get_env_with_default(self, key: str, default: str) -> str:
         """Get environment variable with default value"""
         return os.getenv(key, default).strip()
+
+    def _get_int(self, key: str, default: int, minimum: int, maximum: int) -> int:
+        try:
+            value = int(os.getenv(key, str(default)))
+        except ValueError as e:
+            raise ConfigurationError(f"{key} must be an integer") from e
+        if not minimum <= value <= maximum:
+            raise ConfigurationError(f"{key} must be between {minimum} and {maximum}")
+        return value
 
     def _parse_cors_origins(self) -> List[str]:
         """Parse CORS origins from environment"""
@@ -243,8 +269,10 @@ class BotConfig:
                 "must be set in environment variables"
             )
 
-        if not self.llm_base_url:
-            raise ConfigurationError("LLM_BASE_URL must be set")
+        if not self.llm_base_url and not os.getenv("LLM_API_KEY", "").strip():
+            raise ConfigurationError(
+                "LLM_API_KEY is required when LLM_BASE_URL is empty"
+            )
 
         if not self.model_name:
             raise ConfigurationError("MODEL_NAME must be set")

@@ -54,7 +54,7 @@ All rich menus use a 3x2 button grid layout:
 
 - Python 3.11+
 - LINE Messaging API account
-- OpenAI API key (for AI features)
+- A local vLLM server with SEA-LION weights, or an API key for a configured model provider
 - Docker (optional, for containerized deployment)
 
 ### Installation
@@ -88,6 +88,11 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ### Docker Deployment
 
+For `https://webhook.imigo.tw/webhook`, follow the
+[Cloudflare Tunnel setup](docs/cloudflare-webhook.md). It provides a stable custom
+hostname while the website stays on Vercel and the model runs locally.
+The commands below use the existing ngrok setup.
+
 ```bash
 docker-compose up -d
 ```
@@ -106,18 +111,26 @@ Key configuration options in `.env`:
 LINE_CHANNEL_SECRET=your_channel_secret
 LINE_CHANNEL_ACCESS_TOKEN=your_channel_access_token
 
-# OpenAI Configuration
-OPENAI_API_KEY=your_openai_api_key
-OPENAI_MODEL=gpt-4
+# Model configuration (shared by chat and translation)
+LLM_BASE_URL=http://localhost:8001/v1
+MODEL_NAME=aisingapore/Qwen-SEA-LION-v4-32B-IT-4BIT
+LLM_CHAT_TEMPLATE_KWARGS={"enable_thinking":false,"thinking_mode":"off"}
+CHAT_HISTORY_MESSAGES=12
+CHAT_INPUT_MAX_BYTES=6000
+VLLM_MAX_MODEL_LEN=8192
 
 # Bot Configuration
-BOT_NAME=IMIGO
 DEFAULT_LANGUAGE=id
-COUNTRY=taiwan
 
 # Database
 DATABASE_URL=sqlite+aiosqlite:///./database.db
 ```
+
+See [.env.example](.env.example) for all settings and
+[the model evaluation guide](docs/model-evaluation.md) before switching models.
+The model server and both services use `MODEL_NAME`. Set `MODEL_PATH` to load
+local weights under `/models`, while keeping `MODEL_NAME` equal to their actual model ID.
+`models/sealion-model` is not automatically selected; check its model card first.
 
 ## API Endpoints
 

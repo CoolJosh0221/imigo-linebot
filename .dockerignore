@@ -49,6 +49,10 @@ podman-compose*.yaml
 # Models (will be mounted as volume)
 models/
 sealion-model/
+.runtime/
+.secrets/
+.planning/
+evals/results/
 
 # Documentation
 *.md

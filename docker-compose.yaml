@@ -6,7 +6,9 @@ services:
       dockerfile: Dockerfile
     container_name: migrant-worker-bot
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
+    env_file:
+      - .env
     environment:
       - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
@@ -24,23 +26,26 @@ services:
     networks:
       - bot-network
 
-  # vLLM Server for SEA-LION-7B
+  # vLLM server; model ID stays aligned with the backend.
   vllm:
     image: vllm/vllm-openai:latest
     container_name: vllm
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
+      - ./models:/models:ro
     command:
       - "--model"
-      - "aisingapore/Qwen-SEA-LION-v4-32B-IT-4BIT"
+      - "${MODEL_PATH:-${MODEL_NAME:-aisingapore/Qwen-SEA-LION-v4-32B-IT-4BIT}}"
+      - "--served-model-name"
+      - "${MODEL_NAME:-aisingapore/Qwen-SEA-LION-v4-32B-IT-4BIT}"
       - "--dtype"
       - "float16"
       - "--gpu-memory-utilization"
       - "0.93"
       - "--max-model-len"
-      - "4096"
+      - "${VLLM_MAX_MODEL_LEN:-8192}"
       - "--enforce-eager"
       - "--port"
       - "8000"
@@ -75,7 +80,7 @@ services:
       - "http://backend:8000"
       - "--authtoken=${NGROK_AUTHTOKEN}"
     ports:
-      - "4040:4040"  # ngrok web interface
+      - "127.0.0.1:4040:4040"  # ngrok web interface
     depends_on:
       - backend
     restart: unless-stopped

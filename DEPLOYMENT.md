@@ -276,6 +276,13 @@ Visit `http://localhost:4040` to see:
 
 ## Production Deployment
 
+### Custom domain: webhook.imigo.tw
+
+Use the [Cloudflare Tunnel deployment guide](docs/cloudflare-webhook.md) and
+`compose.cloudflare.yaml` for the custom-domain webhook. The guide covers domain
+onboarding, tunnel credentials, route validation, LINE activation, and rollback.
+The public hostname exposes only `/webhook`; local API/model ports use loopback.
+
 ### Option 1: ngrok Paid Plan (Easiest)
 - Upgrade to ngrok paid plan for reserved/custom domains
 - No server configuration needed
