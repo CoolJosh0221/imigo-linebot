@@ -1,5 +1,11 @@
 # Progress
 
+- 2026-09-13: User authorized custom-domain implementation on the improvement branch and merging through a PR. Refreshed origin; main is still e8d54f6. GitHub access has repository admin permission; no existing improvement PR.
+- No Cloudflare token, account ID, tunnel credentials, or local cloudflared installation is configured. Proceeding with reviewable setup and automated checks; no DNS migration performed.
+- Added compose.cloudflare.yaml and version-controlled rules limited to webhook.imigo.tw/webhook, file-based tunnel credentials, loopback host ports, account setup documentation, and a signed-empty-event verification CLI.
+- 75 regression tests pass, including both Compose merge variants and exact-body LINE signature checks. Cloudflare account activation remains external setup, not a prerequisite for merging the implementation.
+- cloudflare/cloudflared:2026.9.1 was pulled and used offline to validate ingress and confirm non-webhook paths/wrong host fall through to 404. Added the same routing checks to CI and a reproducible local script.
+
 - 15:40 UTC: Started a 20-minute implementation window. Read planning skill and checked clean Git status.
 - Created improve/linebot-quality from main using approved Git escalation.
 - User additionally requested deployment of unchanged old code. Deployment is prioritized before branch edits.

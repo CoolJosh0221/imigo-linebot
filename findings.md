@@ -1,5 +1,8 @@
 # Findings
 
+- imigo.tw currently uses Vercel DNS. A named Cloudflare Tunnel requires onboarding its DNS zone to Cloudflare while preserving the website's Vercel DNS records.
+- Custom-domain implementation will use a locally managed named tunnel so hostname/path routing is version-controlled. Only /webhook is routed to the app; other paths get 404.
+
 - Main working tree was clean before this task.
 - Config and .env use Qwen-SEA-LION-v4-32B-IT-4BIT; .env.example and README use obsolete settings.
 - models/sealion-model contains Llama-SEA-LION-v3.5-8B-R; all four weight shards exist.

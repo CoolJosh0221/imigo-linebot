@@ -50,6 +50,7 @@ podman-compose*.yaml
 models/
 sealion-model/
 .runtime/
+.secrets/
 evals/results/
 
 # Documentation

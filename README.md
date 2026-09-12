@@ -88,6 +88,11 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 
 ### Docker Deployment
 
+For `https://webhook.imigo.tw/webhook`, follow the
+[Cloudflare Tunnel setup](docs/cloudflare-webhook.md). It provides a stable custom
+hostname while the website stays on Vercel and the model runs locally.
+The commands below use the existing ngrok setup.
+
 ```bash
 docker-compose up -d
 ```

@@ -224,3 +224,4 @@ letsencrypt/
 database.db
 evals/results/
 .runtime/
+.secrets/

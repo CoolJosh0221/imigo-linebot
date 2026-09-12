@@ -6,7 +6,7 @@ services:
       dockerfile: Dockerfile
     container_name: migrant-worker-bot
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     env_file:
       - .env
     environment:
@@ -31,7 +31,7 @@ services:
     image: vllm/vllm-openai:latest
     container_name: vllm
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     volumes:
       - ~/.cache/huggingface:/root/.cache/huggingface
       - ./models:/models:ro
@@ -80,7 +80,7 @@ services:
       - "http://backend:8000"
       - "--authtoken=${NGROK_AUTHTOKEN}"
     ports:
-      - "4040:4040"  # ngrok web interface
+      - "127.0.0.1:4040:4040"  # ngrok web interface
     depends_on:
       - backend
     restart: unless-stopped

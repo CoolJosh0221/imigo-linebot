@@ -1,0 +1,10 @@
+credentials-file: /run/secrets/cloudflared.json
+
+ingress:
+  - hostname: webhook.imigo.tw
+    path: ^/webhook$
+    service: http://backend:8000
+    originRequest:
+      connectTimeout: 10s
+  # The bot's chat/history/admin APIs and documentation are not webhook routes.
+  - service: http_status:404
