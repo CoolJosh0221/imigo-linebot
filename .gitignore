@@ -225,3 +225,4 @@ database.db
 evals/results/
 .runtime/
 .secrets/
+.planning/

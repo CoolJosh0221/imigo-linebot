@@ -51,6 +51,7 @@ models/
 sealion-model/
 .runtime/
 .secrets/
+.planning/
 evals/results/
 
 # Documentation
