@@ -1,29 +1,28 @@
 """Pytest configuration and fixtures"""
+
 import pytest
-import os
 from pathlib import Path
 
 
 @pytest.fixture
-def test_env():
+def test_env(monkeypatch):
     """Set up test environment variables"""
-    os.environ["LINE_CHANNEL_SECRET"] = "test-secret"
-    os.environ["LINE_CHANNEL_ACCESS_TOKEN"] = "test-token"
-    os.environ["LLM_BASE_URL"] = "http://localhost:8001/v1"
-    os.environ["MODEL_NAME"] = "test-model"
-    os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
-    os.environ["DEFAULT_LANGUAGE"] = "id"
+    monkeypatch.setattr("config.load_dotenv", lambda: None)
+    for key, value in {
+        "LINE_CHANNEL_SECRET": "test-secret",
+        "LINE_CHANNEL_ACCESS_TOKEN": "test-token",
+        "LLM_BASE_URL": "http://localhost:8001/v1",
+        "MODEL_NAME": "test-model",
+        "DATABASE_URL": "sqlite+aiosqlite:///:memory:",
+        "DEFAULT_LANGUAGE": "id",
+        "LLM_API_KEY": "test-key",
+        "LLM_CHAT_TEMPLATE_KWARGS": "{}",
+        "CHAT_HISTORY_MESSAGES": "12",
+        "CHAT_INPUT_MAX_BYTES": "6000",
+        "LLM_TIMEOUT_SECONDS": "20",
+    }.items():
+        monkeypatch.setenv(key, value)
     yield
-    # Cleanup
-    for key in [
-        "LINE_CHANNEL_SECRET",
-        "LINE_CHANNEL_ACCESS_TOKEN",
-        "LLM_BASE_URL",
-        "MODEL_NAME",
-        "DATABASE_URL",
-        "DEFAULT_LANGUAGE",
-    ]:
-        os.environ.pop(key, None)
 
 
 @pytest.fixture
